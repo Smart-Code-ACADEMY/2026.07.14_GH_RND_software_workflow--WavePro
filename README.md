@@ -1,7 +1,7 @@
-📌 **Project Title:** **THE PROJECTING AN AUTONOMOUS ROBOT OF THE RESCUE MAZE CATEGORY**  
-📅 **Project Timeline:** **August 2019 – October 2021**  
-🎥 YouTube Demo: [Link: https://youtu.be/3sTD7d_HzC4](https://youtu.be/3sTD7d_HzC4)  
-📦 GitHub Source Code: <https://github.com/IvanSicaja/2019.08.01_GitHub_The-Projecting-an-Autonomous-Robot-of-the-Rescue-Maze-Category>  
+📌 **Project Title:** **Wave Pro - Music Management Studio**  
+📅 **Project Timeline:** **August 2026 – Present [Active Development & Maintenance]**  
+🎥 YouTube Demo: TBD  
+📦 GitHub Source Code: <https://github.com/IvanSicaja/2026.07.14_RND_software_workflow--WavePro>  
 
 ---
 
@@ -15,7 +15,7 @@
 
 ### 💡 Core Challenge This Project Resolves:
 
-Designing and engineering a fully integrated autonomous rescue robot capable of real-time perception, decision-making, navigation, victim detection, and mechanical adaptability in unpredictable maze environments under hardware and computational constraints.
+Designing and engineering a responsive desktop music management system capable of integrating local audio-library indexing, metadata management, file organization, playback, ratings, persistent configuration, filesystem synchronization, and background processing within one unified application.
 
 ---
 
@@ -26,226 +26,191 @@ Designing and engineering a fully integrated autonomous rescue robot capable of 
 ├── Software Engineering
 │ ├── Software / Frameworks / Libraries
 │ │ ├── Python
-│ │ ├── C++ (Arduino firmware development)
-│ │ ├── TensorFlow
-│ │ ├── Keras
-│ │ ├── OpenCV
-│ │ ├── scikit-learn
-│ │ ├── Pandas
-│ │ ├── Git / GitHub
-│ │ ├── Linux
-│ │ ├── Visual Studio Code
-│ │ └── Turtle (Python – maze visualization & mapping)
-│ │
-│ ├── Hardware
-│ │ ├── Raspberry Pi 4B
-│ │ ├── Teensy 3.5
-│ │ └── Arduino
+│ │ ├── PySide6 / Qt
+│ │ ├── Qt Multimedia
+│ │ ├── Mutagen
+│ │ ├── pynput
+│ │ ├── JSON
+│ │ └── pathlib
 │ │
 │ └── Skills
-│   ├── Embedded software development & firmware programming
-│   ├── Real-time sensor data acquisition & processing
-│   ├── Computer vision pipeline architecture
-│   ├── AI model training, validation & optimization
-│   ├── Implementation of search algorithms (BFS, DFS, A*)
-│   ├── Linux-based robotics workflow management
-│   ├── System-level debugging & integration
-│   ├── Performance optimization under limited computational resources
-│   └── Multi-controller distributed architecture design
+│   ├── Desktop GUI application development
+│   ├── Object-oriented software design
+│   ├── Event-driven application architecture
+│   ├── Audio playback integration
+│   ├── Audio metadata processing
+│   ├── Search, filtering & sorting
+│   ├── Persistent application configuration
+│   ├── Keyboard-driven workflow implementation
+│   ├── Exception handling & diagnostics
+│   └── Responsive background-processing architecture
 │
-├── Mechanical Engineering
+├── System Integration Engineering
 │ ├── Software / Frameworks / Libraries
-│ │ └── Autodesk Fusion 360 (CAD/CAM design & simulation)
-│ │
-│ ├── Hardware / Hardware Tools
-│ │ └── Ultimaker 3+ (3D printing system)
+│ │ ├── QFileSystemWatcher
+│ │ ├── QMediaPlayer
+│ │ ├── QAudioOutput
+│ │ ├── QSettings
+│ │ ├── Mutagen
+│ │ └── pynput
 │ │
 │ └── Skills
-│   ├── Full robot chassis design & assembly modeling
-│   ├── Drivetrain engineering & torque optimization
-│   ├── 25-degree incline climbing capability design
-│   ├── Independent axle maneuvering mechanism
-│   ├── Structural strength & grip optimization
-│   ├── 3D printing parameter optimization (density, material selection)
-│   ├── Prototype validation & mechanical stress evaluation
-│   └── Mechanical-electrical integration alignment
+│   ├── GUI-to-filesystem integration
+│   ├── Audio-player integration
+│   ├── Metadata-to-file integration
+│   ├── Filesystem monitoring & synchronization
+│   ├── Global keyboard control integration
+│   ├── Persistent session-state integration
+│   ├── Background task integration
+│   └── End-to-end desktop workflow integration
 │
-├── Electrical Engineering
+├── File & Metadata Management
 │ ├── Software / Frameworks / Libraries
-│ │ └── Arduino IDE
-│ │
-│ ├── Hardware Components
-│ │ ├── Teensy 3.5
-│ │ ├── Raspberry Pi 4B
-│ │ ├── Arduino boards
-│ │ ├── Optical cameras (2x)
-│ │ ├── Thermal cameras (2x)
-│ │ ├── IR LiDAR sensors (6x)
-│ │ ├── Color sensor
-│ │ ├── Wheel encoders
-│ │ └── Motors & motor drivers
-│ │
-│ ├── Hardware Tools
-│ │ └── Power supply
-│ │
-│ ├── Communication Protocols
-│ │ ├── UART / Serial
-│ │ ├── I2C
-│ │ ├── SPI
-│ │ └── USB
+│ │ ├── Mutagen
+│ │ ├── JSON
+│ │ ├── pathlib
+│ │ └── shutil
 │ │
 │ └── Skills
-│   ├── Sensor calibration & integration
-│   ├── Signal filtering & noise reduction
-│   ├── Encoder-based position tracking systems
-│   ├── Multi-board communication architecture
-│   ├── Electrical system wiring & validation
-│   ├── Hardware troubleshooting & diagnostics
-│   ├── Power management & distribution optimization
-│   └── Embedded hardware-software synchronization
+│   ├── Multi-format audio metadata handling
+│   ├── Song title & artist metadata editing
+│   ├── Persistent 0–5 star rating management
+│   ├── Category-based file organization
+│   ├── Collision-safe file movement
+│   ├── File-copy verification
+│   ├── Persistent library caching
+│   └── Incremental library synchronization
 │
-├── Data Science & Artificial Intelligence
+├── Concurrency & Automation
 │ ├── Software / Frameworks / Libraries
-│ │ ├── TensorFlow
-│ │ ├── Keras
-│ │ ├── OpenCV
-│ │ ├── Pandas
-│ │ └── scikit-learn
-│ │
-│ ├── Hardware
-│ │ └── (Camera systems & sensors integrated via Raspberry Pi 4B)
+│ │ ├── QThread
+│ │ ├── Python threading
+│ │ └── Qt Signals / Slots
 │ │
 │ └── Skills
-│   ├── Convolutional Neural Network (CNN) architecture design
-│   ├── OCR model training & evaluation (77.54% accuracy target)
-│   ├── Image preprocessing (grayscale, Gaussian blur, threshold, dilation)
-│   ├── Edge detection & dynamic noise filtering
-│   ├── Custom object detection scripting
-│   ├── Maze mapping & graph representation
-│   ├── Shortest-path computation using BFS, DFS, A*
-│   ├── Data transformation for performance acceleration (.CSV optimization)
-│   └── Overfitting prevention & model generalization strategies
+│   ├── Background library scanning
+│   ├── Non-blocking file operations
+│   ├── Asynchronous metadata processing
+│   ├── Persistent background task queues
+│   ├── Automatic filesystem rescanning
+│   ├── Background global hotkey handling
+│   └── GUI responsiveness optimization
 │
 └── Research & Development Engineering
   ├── Software / Frameworks / Libraries
   │ └── Integrated within sections above
   │
-  ├── Hardware / Hardware Tools
-  │ └── Integrated within sections above
-  │
   └── Skills
-    ├── System architecture design from concept to prototype
-    ├── Hardware feasibility analysis & component selection
-    ├── Iterative testing & calibration cycles
-    ├── Cross-disciplinary engineering coordination
-    ├── Technical documentation & publication preparation
-    ├── Experimental validation & benchmarking
-    └── End-to-end robotics system development
+    ├── Desktop application architecture development
+    ├── File & metadata interface integration
+    ├── Incremental scanning workflow development
+    ├── Reliability-oriented file handling
+    ├── Persistent application-state design
+    ├── User workflow optimization
+    └── Technical debugging & diagnostics
 ```
 
 ---
 
 ### 📋 Core System Capabilities - List Only:
 
-- **Autonomous character recognition (OCR)**
-- **Autonomous color recognition**
-- **Partially autonomous drive in the maze** (need a lot of testing and calibration for fully autonomous drive and labyrinth mapping)
-- **Thermal victim recognition**
-- **Package delivery**
-- **Ability to master a climb of 25 degrees** (all-wheel drive, strong grip)
-- **Independent axle maneuvering**
-- **Remembering positions (encoders)**...
+- **Local music library management**
+- **Integrated audio playback**
+- **Automatic folder and category discovery**
+- **Background library scanning**
+- **Incremental JSON-based library caching**
+- **Automatic filesystem change detection**
+- **Multi-format audio metadata processing**
+- **Song title and artist editing**
+- **Persistent 0–5 star ratings**
+- **Category-based song organization**
+- **Collision-safe file movement**
+- **Search, filtering and sorting**
+- **Shuffle and multiple repeat modes**
+- **Global keyboard shortcuts**
+- **Accelerated seek and volume controls**
+- **Persistent application settings**
+- **Persistent background task queue**
+- **To-Do placeholders for planned songs**
+- **Non-blocking file-management operations**...
 
 ---
 
 ### 🧠️ How It Works - Core System Capabilities Workflow:
 
-The project is very complex and demands knowledge in different areas (**3D modeling, 3D printing, advanced programming skills in different languages, researching ability, expert knowledge of every electrical component working principles, image processing, cause-and-effect analysis...**)  
-The brains of the robot are **microcontroller Teensy 3.5** and **Raspberry Pi 4B**.
+The project combines different software-engineering areas (**desktop GUI development, filesystem management, audio metadata processing, multimedia playback, concurrency, persistent configuration, background processing, keyboard automation, error handling...**)  
+The core of the application is **Python**, **PySide6 / Qt**, **Qt Multimedia**, and **Mutagen**.
 
-The robot is also equipped with:
+The application is also equipped with:
 
-- **2x optical camera**
-- **2x thermal camera**
-- **6x IR lidar sensor**
-- **1x color sensor**... (more can be found at GitHub in my publication paper: _The projecting an autonomous robot of the rescue maze category.pdf_ -> Caption 4.3)
+- **Local filesystem music-library management**
+- **Background library scanner**
+- **Integrated Qt audio player**
+- **Multi-format metadata processing**
+- **Persistent JSON cache**
+- **Filesystem change monitoring**
+- **Global keyboard shortcuts**... (depending on the installed optional `pynput` dependency)
 
-**Optical character recognition:**  
-In this project, we trained a **Convolutional Neural Network (CNN)** on an image examples with the Python module **TensorFlow**. Images are converted into **.CSV file** because of speeder processing. The input image is filtered with different filters (**Grayscale, Gaussian Blur, Threshold, Binary, Dilatation**) in order to speed up image processing (replace three color channels with one channel, **RGB -> grayscale**). Reduce noises (the dust on the live video capturing). Getting smooth and sharp character edges is the most important characteristic for successful character recognition. The trained model accuracy is **77.54%** which is a target because we want to get high reliability and avoid CNN overfitting.
+**Music library scanning:**  
+The user selects a main music folder containing category subfolders. Wave Pro scans supported files including **MP3, FLAC, OGG, M4A, MP4, WAV, WMA, AAC and OGA**. Files are represented internally with information such as **path, category, title, artist, rating, duration and internal ID**. A persistent JSON cache stores file size, modification time and metadata so unchanged files can reuse previously processed information during later scans.
 
-**Object detection:**  
-Developed the custom script with the Python computer vision module **OpenCV** which filters the character that should be recognized from the other objects in the robot's surroundings. The script works on the principle of **character height and proportion**, together with the **dynamic noise filtering**.
+**Audio metadata management:**  
+The application uses the Python module **Mutagen** for reading and modifying audio metadata. Song titles and artist information can be managed directly through the application. Ratings from **0 to 5 stars** are stored using format-specific metadata mechanisms such as **ID3 TXXX / POPM, FLAC metadata, OGG metadata and MP4 custom atoms**.
 
-**Maze mapping:**  
-Maze mapping is done in my Python module **Turtle**. Every maze field is properly recognized by the robot's **distance and color sensors**. After all maze fields are mapped, they are sent to the backend and the shortest path is calculated by the artificial intelligence searching algorithms such as: _Breadth-First Search, Depth-First Search, A Algorithm_\*...
+**Filesystem synchronization:**  
+The application uses **QFileSystemWatcher** to monitor the selected music folder and its category subfolders. External file or directory changes trigger a delayed background rescan so the displayed library can remain synchronized with the actual filesystem.
 
-**Hardware choosing and connecting:**  
-The entire process of choosing **hardware platforms, supported protocols, and hardware capabilities** is done. E.g. the **video camera** must have a corresponding **focal length** otherwise it will be useless, **framerate, resolution, additional light source**, **motors** should have expected speed, **distance sensors** should be precise and able to work in a maze, **robot brain** should be able to do high computation payload and support Python…
+**File organization:**  
+Songs can be reassigned between category folders. Wave Pro copies the source file to a temporary `.part` destination, verifies the copied file size, completes the destination operation and removes the original file only after successful verification. Existing destination filenames are handled automatically by generating a unique filename.
 
-**Frame design and 3D printing:**  
-Entire robot is **3D designed** with **Fusion 360 CAD/CAM** software and **3D printed** with the **Ultimaker 3+** 3D printer with corresponding **filament, density**, etc.
+**Audio playback:**  
+Audio playback is implemented through **QMediaPlayer** and **QAudioOutput**. The player supports **play/pause, previous song, next song, seeking, volume control, shuffle and multiple repeat modes**.
 
-**Developing mechatronic code:**  
-**Arduino** is used to control all **sensors and actuators** on the robot except the **camera** which is controlled by **Raspberry Pi 4B** computer.
+**Background processing:**  
+Library scanning and file-management operations use **QThread, Python threading and Qt Signals / Slots**. File operations such as **moving, renaming, rating and deleting songs** are processed through a background task worker in order to keep the main GUI workflow responsive.
+
+**Global keyboard control:**  
+The optional Python module **pynput** enables global keyboard shortcuts even when another application has focus. Implemented commands include **play/pause, next song, previous song, mute, seeking, volume adjustment, song rating and To-Do creation**. Without `pynput`, shortcuts remain available while the Wave Pro application has focus.
+
+**Persistent application state:**  
+The application uses **QSettings** and JSON-based persistence to retain application configuration, library location, selected filters, sorting state, volume, last selected or played song, cache data and unfinished background tasks between application sessions.
 
 ---
 
 ### ⚠️ Note:
 
-Achieving fully **autonomous drive** and **labyrinth mapping** requires extensive testing and calibration.  
-I would especially like to thank **Mirko Pezo** and **Stjepan Mikulic** for their exceptional contribution to the development of this project .
+Wave Pro is currently under **Active Development & Maintenance**. The application implements runtime error handling, collision-safe file operations, file-copy verification, persistent caching, filesystem synchronization and background-task recovery. A dedicated automated unit, integration or system test suite is not currently established in the supplied project implementation.
 
 ---
 
 ### 📸 Project Snapshots:
 
 <p align="center">
-  <img src="https://github.com/IvanSicaja/2019.08.01_GitHub_The-Projecting-an-Autonomous-Robot-of-the-Rescue-Maze-Category/blob/main/publish/2.0_Thumbnail_1.png?raw=true" 
-       alt="Rescue Maze Robot Preview 1" 
-       width="640" 
-       height="360">
+TBD
 </p>
 
 <p align="center">
-  <img src="https://github.com/IvanSicaja/2019.08.01_GitHub_The-Projecting-an-Autonomous-Robot-of-the-Rescue-Maze-Category/blob/main/publish/2.0_Thumbnail_2.png?raw=true" 
-       alt="Rescue Maze Robot Preview 2" 
-       width="640" 
-       height="360">
+TBD
 </p>
 
 <p align="center">
-  <img src="https://github.com/IvanSicaja/2019.08.01_GitHub_The-Projecting-an-Autonomous-Robot-of-the-Rescue-Maze-Category/blob/main/publish/2.0_Thumbnail_3.png?raw=true" 
-       alt="Rescue Maze Robot Preview 3" 
-       width="640" 
-       height="360">
+TBD
 </p>
 
 <p align="center">
-  <img src="https://github.com/IvanSicaja/2019.08.01_GitHub_The-Projecting-an-Autonomous-Robot-of-the-Rescue-Maze-Category/blob/main/publish/2.0_Thumbnail_4.png?raw=true" 
-       alt="Rescue Maze Robot Preview 4" 
-       width="640" 
-       height="360">
+TBD
 </p>
 
 <p align="center">
-  <img src="https://github.com/IvanSicaja/2019.08.01_GitHub_The-Projecting-an-Autonomous-Robot-of-the-Rescue-Maze-Category/blob/main/publish/2.0_Thumbnail_5.png?raw=true" 
-       alt="Rescue Maze Robot Preview 5" 
-       width="640" 
-       height="360">
+TBD
 </p>
 
 <p align="center">
-  <img src="https://github.com/IvanSicaja/2019.08.01_GitHub_The-Projecting-an-Autonomous-Robot-of-the-Rescue-Maze-Category/blob/main/publish/2.0_Thumbnail_6.png?raw=true" 
-       alt="Rescue Maze Robot Preview 6" 
-       width="640" 
-       height="360">
+TBD
 </p>
 
 <p align="center">
-  <img src="https://github.com/IvanSicaja/2019.08.01_GitHub_The-Projecting-an-Autonomous-Robot-of-the-Rescue-Maze-Category/blob/main/publish/2.0_Thumbnail_7.png?raw=true" 
-       alt="Rescue Maze Robot Preview 7" 
-       width="640" 
-       height="360">
+TBD
 </p>
 
 ---
@@ -253,16 +218,11 @@ I would especially like to thank **Mirko Pezo** and **Stjepan Mikulic** for thei
 ### 🎥 Video Demonstration:
 
 <p align="center">
-  <a href="https://youtu.be/3sTD7d_HzC4">
-    <img src="https://img.youtube.com/vi/3sTD7d_HzC4/0.jpg" 
-         alt="Watch the demo" 
-         width="640" 
-         height="1000">
-  </a>
+TBD
 </p>
 
 ---
 
 ### 📣 Hashtags Section:
 
-**#AutonomousRobotics #RescueMaze #RoboticsEngineering #AI #ComputerVision #OCR #ObjectDetection #PathPlanning #CNN #TensorFlow #OpenCV #EmbeddedSystems #RaspberryPi #Arduino #3DPrinting #Fusion360 #Mechatronics #AutonomousNavigation #MachineLearning**
+**#WavePro #MusicManagement #AudioSoftware #Python #PySide6 #Qt #QtMultimedia #Mutagen #DesktopApplication #SystemIntegration #SoftwareEngineering #FileSystemIntegration #MetadataManagement #Concurrency #BackgroundProcessing #Automation #DataPersistence #GUI #ResearchAndDevelopment**

@@ -65,7 +65,7 @@ from PySide6.QtWidgets import (
 )
 
 ORG_NAME = "WavePro"
-APP_NAME  = "Wave Pro - Music Studio"
+APP_NAME  = "Wave Pro - Music Management Studio"
 
 # ============================================================================
 # Metadata helpers
