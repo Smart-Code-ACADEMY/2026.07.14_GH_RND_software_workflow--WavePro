@@ -3506,11 +3506,13 @@ class MainWindow(QMainWindow):
         self._set_info(f"{n} songs  \u2022  Up to date", "success",
                        auto_reset=True, duration_ms=3000)
 
+        self._restore_session_state()
+
+        # Apply filters AFTER session restore so saved cat_checks are used
+        self._update_cat_btn_label()
         self._apply_filters()
         self._update_queue_numbers()
         self._rebuild_play_queue()
-
-        self._restore_session_state()
 
         if added or removed:
             self.last_added = added; self.last_removed = removed
@@ -4379,25 +4381,84 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # ------ Tag definitions for quick-add buttons ------
     # ALL tags use square brackets [X] format.
-    # Filter checks: [a] and [c] use bracket match; collab/cover use word match.
+    # Song Name Rules — tag ordering (left to right):
+    #   Artist - Song Name [Collab] [Cover] [A] [C]
+    # Tags must always appear in this exact order at the end of the title.
+    _TAG_ORDER = ["[Collab]", "[Cover]", "[A]", "[C]"]
+    _TAG_ORDER_LOWER = ["[collab]", "[cover]", "[a]", "[c]"]
+
     _TAG_DEFS = [
-        # (label, tag_text, check_text_lower, tooltip)
-        ("[A]",      "[A]",      "[a]",      "Accordion"),
-        ("[C]",      "[C]",      "[c]",      "Christmas"),
-        ("[Collab]", "[Collab]", "[collab]",  "Collaboration"),
-        ("[Cover]",  "[Cover]",  "[cover]",   "Cover"),
+        # (label, tag_text, check_text_lower, tooltip, order_index)
+        ("[A]",      "[A]",      "[a]",      "Accordion",     2),
+        ("[C]",      "[C]",      "[c]",      "Christmas",     3),
+        ("[Collab]", "[Collab]", "[collab]",  "Collaboration", 0),
+        ("[Cover]",  "[Cover]",  "[cover]",   "Cover",         1),
     ]
 
     @staticmethod
-    def _insert_tag(title: str, tag_text: str, check_lower: str) -> str:
-        """Insert a square-bracket tag at the end of the title.
+    def _strip_all_tags(title: str) -> tuple:
+        """Remove all known tags from title, return (base_title, found_tags_lower).
 
-        All tags go at the very end, in order.
+        found_tags_lower is a set of lowercase tag strings found.
+        """
+        tag_patterns = ["[Collab]", "[Cover]", "[A]", "[C]",
+                        "[collab]", "[cover]", "[a]", "[c]",
+                        "[COLLAB]", "[COVER]"]
+        base = title
+        found = set()
+        for tag in tag_patterns:
+            low = tag.lower()
+            if low in base.lower():
+                found.add(low)
+                # Remove the tag (case-insensitive) while preserving surrounding spaces
+                idx = base.lower().find(low)
+                while idx != -1:
+                    end = idx + len(tag)
+                    # Remove extra space before or after
+                    if end < len(base) and base[end] == ' ':
+                        end += 1
+                    elif idx > 0 and base[idx - 1] == ' ':
+                        idx -= 1
+                    base = base[:idx] + base[end:]
+                    idx = base.lower().find(low)
+        return base.rstrip(), found
+
+    @staticmethod
+    def _rebuild_with_tags(base_title: str, tags_lower: set) -> str:
+        """Rebuild title with tags in correct order per Song Name Rules.
+
+        Order: [Collab] [Cover] [A] [C]
+        """
+        tag_order = ["[collab]", "[cover]", "[a]", "[c]"]
+        tag_display = {"[collab]": "[Collab]", "[cover]": "[Cover]",
+                       "[a]": "[A]", "[c]": "[C]"}
+        result = base_title.rstrip()
+        for t in tag_order:
+            if t in tags_lower:
+                result = f"{result} {tag_display[t]}"
+        return result
+
+    @classmethod
+    def _insert_tag(cls, title: str, tag_text: str, check_lower: str) -> str:
+        """Insert a tag at the correct position per Song Name Rules.
+
+        Tags always appear in order: [Collab] [Cover] [A] [C]
         If the tag already exists (case-insensitive), return unchanged.
         """
         if check_lower in title.lower():
             return title  # already present
-        return f"{title.rstrip()} {tag_text}"
+        base, found = cls._strip_all_tags(title)
+        found.add(check_lower)
+        return cls._rebuild_with_tags(base, found)
+
+    @classmethod
+    def _remove_tag(cls, title: str, check_lower: str) -> str:
+        """Remove a tag and rebuild in correct order."""
+        if check_lower not in title.lower():
+            return title  # not present
+        base, found = cls._strip_all_tags(title)
+        found.discard(check_lower)
+        return cls._rebuild_with_tags(base, found)
 
     def _on_title_edit_unlock(self, sid: str, unlocked: bool):
         item = self.row_items.get(sid)
@@ -4479,27 +4540,33 @@ class MainWindow(QMainWindow):
             hlay.setSpacing(4)
 
             tag_buttons = []
-            for label, tag_text, check_lower, tooltip in self._TAG_DEFS:
+            _CSS_TAG_OFF = (
+                "QToolButton{background:rgba(10,132,255,0.15);"
+                "border:1px solid rgba(10,132,255,0.4);"
+                "border-radius:4px;color:#0a84ff;"
+                "font-size:11px;font-weight:600;padding:1px 6px;}"
+                "QToolButton:hover{background:rgba(10,132,255,0.3);}")
+            _CSS_TAG_ON = (
+                "QToolButton{background:rgba(48,209,88,0.25);"
+                "border:1px solid rgba(48,209,88,0.6);"
+                "border-radius:4px;color:#30D158;"
+                "font-size:11px;font-weight:600;padding:1px 6px;}"
+                "QToolButton:hover{background:rgba(48,209,88,0.4);}")
+
+            for label, tag_text, check_lower, tooltip, _oidx in self._TAG_DEFS:
                 btn = QToolButton()
-                btn.setText(f"+ {label}")
-                btn.setToolTip(f"Add {tooltip} tag")
                 btn.setCursor(Qt.PointingHandCursor)
                 btn.setFixedHeight(20)
-                already_has = check_lower in song.title.lower()
-                btn.setEnabled(not already_has)
-                btn.setStyleSheet(
-                    "QToolButton{background:rgba(10,132,255,0.15);"
-                    "border:1px solid rgba(10,132,255,0.4);"
-                    "border-radius:4px;color:#0a84ff;"
-                    "font-size:11px;font-weight:600;padding:1px 6px;}"
-                    "QToolButton:hover{background:rgba(10,132,255,0.3);}"
-                    "QToolButton:disabled{background:rgba(99,99,102,0.15);"
-                    "border-color:rgba(99,99,102,0.3);color:#636366;}")
 
                 def _make_tag_click(t_text, c_lower):
                     def _on_click():
                         cur = editor.text()
-                        new_text = self._insert_tag(cur, t_text, c_lower)
+                        if c_lower in cur.lower():
+                            # REMOVE tag
+                            new_text = self._remove_tag(cur, c_lower)
+                        else:
+                            # ADD tag at correct position
+                            new_text = self._insert_tag(cur, t_text, c_lower)
                         if new_text != cur:
                             editor.setText(new_text)
                         _refresh_tag_buttons()
@@ -4507,16 +4574,21 @@ class MainWindow(QMainWindow):
 
                 btn.clicked.connect(_make_tag_click(tag_text, check_lower))
                 hlay.addWidget(btn)
-                tag_buttons.append((btn, check_lower))
+                tag_buttons.append((btn, label, check_lower))
 
             hlay.addStretch()
             vlay.addWidget(tag_row)
 
             def _refresh_tag_buttons():
                 txt = editor.text().lower()
-                for b, cl in tag_buttons:
-                    b.setEnabled(cl not in txt)
+                for b, lbl, cl in tag_buttons:
+                    has_tag = cl in txt
+                    b.setText(f"− {lbl}" if has_tag else f"+ {lbl}")
+                    b.setToolTip(f"Remove {lbl} tag" if has_tag
+                                 else f"Add {lbl} tag")
+                    b.setStyleSheet(_CSS_TAG_ON if has_tag else _CSS_TAG_OFF)
 
+            _refresh_tag_buttons()  # set initial state
             editor.textChanged.connect(lambda _: _refresh_tag_buttons())
 
             # ── Commit / Cancel logic ──
