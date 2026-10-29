@@ -3702,12 +3702,19 @@ class MainWindow(QMainWindow):
 
         self._update_cat_btn_label()
 
+        checked = self._get_checked_categories()
+        checked.sort(key=str.lower)
         for sid, item in self.row_items.items():
             combo = self.table.cellWidget(item.row(), COL_CATEGORY)
             if combo is None: continue
             cur = combo.currentText()
-            combo.blockSignals(True); combo.clear(); combo.addItems(cats)
-            if cur in cats: combo.setCurrentText(cur)
+            # Only show checked categories + song's own current category
+            items = list(checked)
+            if cur and cur not in items:
+                items.append(cur)
+                items.sort(key=str.lower)
+            combo.blockSignals(True); combo.clear(); combo.addItems(items)
+            if cur in items: combo.setCurrentText(cur)
             combo.blockSignals(False)
 
     # ------------------------------------------------------------------
@@ -3922,6 +3929,28 @@ class MainWindow(QMainWindow):
                 self.table.setRowHidden(item.row(), not self._matches(song))
         self._update_queue_numbers()
         self._rebuild_play_queue()
+        self._refresh_unlocked_combos()
+
+    def _refresh_unlocked_combos(self):
+        """Update all currently-unlocked category combos to show only
+        the categories that are checked in the filter."""
+        checked = self._get_checked_categories()
+        checked.sort(key=str.lower)
+        for sid, item in self.row_items.items():
+            combo = self.table.cellWidget(item.row(), COL_CATEGORY)
+            if combo is None or not combo.isEnabled():
+                continue
+            cur = combo.currentText()
+            items = list(checked)
+            if cur and cur not in items:
+                items.append(cur)
+                items.sort(key=str.lower)
+            combo.blockSignals(True)
+            combo.clear()
+            combo.addItems(items)
+            if cur in items:
+                combo.setCurrentText(cur)
+            combo.blockSignals(False)
 
     def _rebuild_play_queue(self):
         current = self.player.current_song()
@@ -4140,12 +4169,31 @@ class MainWindow(QMainWindow):
         if song:
             self._delete_song(song)
 
+    def _get_checked_categories(self) -> list[str]:
+        """Return category names currently checked in the filter."""
+        return [c for c, checked in self._cat_checks.items() if checked]
+
     def _on_cat_lock_toggle(self, sid: str, unlocked: bool):
         item = self.row_items.get(sid)
         if item is None: return
         combo = self.table.cellWidget(item.row(), COL_CATEGORY)
-        if combo:
-            combo.setEnabled(unlocked)
+        if combo is None:
+            return
+        if unlocked:
+            # Repopulate combo with only checked categories + current
+            cur = combo.currentText()
+            checked = self._get_checked_categories()
+            # Always include the song's own category so it's visible
+            if cur and cur not in checked:
+                checked.append(cur)
+            checked.sort(key=str.lower)
+            combo.blockSignals(True)
+            combo.clear()
+            combo.addItems(checked)
+            if cur in checked:
+                combo.setCurrentText(cur)
+            combo.blockSignals(False)
+        combo.setEnabled(unlocked)
 
     def _on_rat_lock_toggle(self, sid: str, unlocked: bool):
         item = self.row_items.get(sid)
@@ -4170,7 +4218,8 @@ class MainWindow(QMainWindow):
         self.bulk_del_btn.setEnabled(enabled)
         if enabled:
             self.bulk_status.setText(f"{n} songs selected")
-            cats = list_categories(self.root_path) if self.root_path else []
+            cats = self._get_checked_categories()
+            cats.sort(key=str.lower)
             self.bulk_cat_combo.blockSignals(True)
             self.bulk_cat_combo.clear()
             self.bulk_cat_combo.addItem("Move to\u2026")
@@ -4329,40 +4378,26 @@ class MainWindow(QMainWindow):
     # Title editing
     # ------------------------------------------------------------------
     # ------ Tag definitions for quick-add buttons ------
+    # ALL tags use square brackets [X] format.
+    # Filter checks: [a] and [c] use bracket match; collab/cover use word match.
     _TAG_DEFS = [
         # (label, tag_text, check_text_lower, tooltip)
-        ("[A]",    "[A]",    "[a]",    "Accordion tag"),
-        ("[C]",    "[C]",    "[c]",    "Christmas tag"),
-        ("Collab", "Collab", "collab", "Collaboration tag"),
-        ("Cover",  "Cover",  "cover",  "Cover tag"),
+        ("[A]",      "[A]",      "[a]",      "Accordion"),
+        ("[C]",      "[C]",      "[c]",      "Christmas"),
+        ("[Collab]", "[Collab]", "[collab]",  "Collaboration"),
+        ("[Cover]",  "[Cover]",  "[cover]",   "Cover"),
     ]
 
     @staticmethod
     def _insert_tag(title: str, tag_text: str, check_lower: str) -> str:
-        """Insert a tag into the title at the correct position.
+        """Insert a square-bracket tag at the end of the title.
 
-        Rules:
-        - Square-bracket tags [A], [C] go at the very end of the title
-        - Text tags (Collab, Cover) go before any bracket tags
-        - If the tag already exists (case-insensitive), return unchanged
+        All tags go at the very end, in order.
+        If the tag already exists (case-insensitive), return unchanged.
         """
         if check_lower in title.lower():
             return title  # already present
-
-        # For bracket tags [A], [C] — append at the very end
-        if tag_text.startswith("["):
-            return f"{title.rstrip()} {tag_text}"
-
-        # For text tags (Collab, Cover) — insert before any trailing [X] tags
-        # Find trailing bracket tags like [A] [C]
-        match = re.search(r'(\s*(?:\[[A-Za-z]\]\s*)+)$', title)
-        if match:
-            # Insert before the bracket tags
-            before = title[:match.start()]
-            brackets = match.group(0)
-            return f"{before.rstrip()} ({tag_text}){brackets}"
-        else:
-            return f"{title.rstrip()} ({tag_text})"
+        return f"{title.rstrip()} {tag_text}"
 
     def _on_title_edit_unlock(self, sid: str, unlocked: bool):
         item = self.row_items.get(sid)
@@ -4371,9 +4406,10 @@ class MainWindow(QMainWindow):
         if song is None: return
 
         if unlocked:
-            from PySide6.QtWidgets import QLineEdit
+            from PySide6.QtWidgets import QLineEdit, QCompleter
+            from difflib import SequenceMatcher
 
-            # ── Container widget with editor + tag buttons ──
+            # ── Container widget: editor + action buttons + tag buttons ──
             container = QWidget()
             container.setObjectName("editContainer")
             container.setStyleSheet(
@@ -4382,11 +4418,58 @@ class MainWindow(QMainWindow):
             vlay.setContentsMargins(0, 0, 0, 0)
             vlay.setSpacing(2)
 
+            # ── Editor row: text field + Save + Cancel ──
+            editor_row = QWidget()
+            editor_row.setStyleSheet("background:transparent;")
+            elay = QHBoxLayout(editor_row)
+            elay.setContentsMargins(0, 0, 0, 0)
+            elay.setSpacing(4)
+
             editor = QLineEdit(song.title)
             editor.setObjectName("cellEditor")
             editor.selectAll()
             editor.setMinimumHeight(ROW_HEIGHT - 8)
-            vlay.addWidget(editor)
+            elay.addWidget(editor, stretch=1)
+
+            # ── Autocomplete: top 5 similar titles from database ──
+            all_titles = sorted(set(
+                s.title for s in self.songs_by_id.values()
+                if s.id != song.id))
+            completer = QCompleter(all_titles, editor)
+            completer.setCaseSensitivity(Qt.CaseInsensitive)
+            completer.setFilterMode(Qt.MatchContains)
+            completer.setMaxVisibleItems(5)
+            editor.setCompleter(completer)
+
+            # ── Save button ──
+            save_btn = QToolButton()
+            save_btn.setText("✓")
+            save_btn.setToolTip("Save new title  (Enter)")
+            save_btn.setCursor(Qt.PointingHandCursor)
+            save_btn.setFixedSize(28, 26)
+            save_btn.setStyleSheet(
+                "QToolButton{background:rgba(48,209,88,0.2);"
+                "border:1px solid rgba(48,209,88,0.5);"
+                "border-radius:4px;color:#30D158;"
+                "font-size:14px;font-weight:700;}"
+                "QToolButton:hover{background:rgba(48,209,88,0.35);}")
+            elay.addWidget(save_btn)
+
+            # ── Cancel button ──
+            cancel_btn = QToolButton()
+            cancel_btn.setText("✗")
+            cancel_btn.setToolTip("Cancel editing  (Esc)")
+            cancel_btn.setCursor(Qt.PointingHandCursor)
+            cancel_btn.setFixedSize(28, 26)
+            cancel_btn.setStyleSheet(
+                "QToolButton{background:rgba(255,69,58,0.2);"
+                "border:1px solid rgba(255,69,58,0.5);"
+                "border-radius:4px;color:#FF453A;"
+                "font-size:14px;font-weight:700;}"
+                "QToolButton:hover{background:rgba(255,69,58,0.35);}")
+            elay.addWidget(cancel_btn)
+
+            vlay.addWidget(editor_row)
 
             # ── Tag buttons row ──
             tag_row = QWidget()
@@ -4399,10 +4482,9 @@ class MainWindow(QMainWindow):
             for label, tag_text, check_lower, tooltip in self._TAG_DEFS:
                 btn = QToolButton()
                 btn.setText(f"+ {label}")
-                btn.setToolTip(f"Add {tooltip} to title")
+                btn.setToolTip(f"Add {tooltip} tag")
                 btn.setCursor(Qt.PointingHandCursor)
                 btn.setFixedHeight(20)
-                # Check if tag already exists — disable if so
                 already_has = check_lower in song.title.lower()
                 btn.setEnabled(not already_has)
                 btn.setStyleSheet(
@@ -4412,22 +4494,18 @@ class MainWindow(QMainWindow):
                     "font-size:11px;font-weight:600;padding:1px 6px;}"
                     "QToolButton:hover{background:rgba(10,132,255,0.3);}"
                     "QToolButton:disabled{background:rgba(99,99,102,0.15);"
-                    "border-color:rgba(99,99,102,0.3);color:#636366;}"
-                )
+                    "border-color:rgba(99,99,102,0.3);color:#636366;}")
 
-                def _make_click_handler(t_text, c_lower, b):
+                def _make_tag_click(t_text, c_lower):
                     def _on_click():
-                        current = editor.text()
-                        new_text = self._insert_tag(current, t_text, c_lower)
-                        if new_text != current:
+                        cur = editor.text()
+                        new_text = self._insert_tag(cur, t_text, c_lower)
+                        if new_text != cur:
                             editor.setText(new_text)
-                            b.setEnabled(False)
-                            b.setToolTip(f"Tag already added")
-                        # Refresh all button states
                         _refresh_tag_buttons()
                     return _on_click
 
-                btn.clicked.connect(_make_click_handler(tag_text, check_lower, btn))
+                btn.clicked.connect(_make_tag_click(tag_text, check_lower))
                 hlay.addWidget(btn)
                 tag_buttons.append((btn, check_lower))
 
@@ -4435,37 +4513,42 @@ class MainWindow(QMainWindow):
             vlay.addWidget(tag_row)
 
             def _refresh_tag_buttons():
-                """Update enabled state of all tag buttons based on current editor text."""
                 txt = editor.text().lower()
                 for b, cl in tag_buttons:
                     b.setEnabled(cl not in txt)
 
-            # Update tag button states as user types
             editor.textChanged.connect(lambda _: _refresh_tag_buttons())
 
-            _commit_done = [False]  # guard against double-fire
+            # ── Commit / Cancel logic ──
+            _done = [False]
+
+            def _cleanup():
+                """Restore row and remove editor widgets."""
+                self.table.setRowHeight(item.row(), ROW_HEIGHT)
+                self.table.removeCellWidget(item.row(), COL_ARTIST)
+                self.table.removeCellWidget(item.row(), COL_SONGNAME)
+
+            def _cancel():
+                if _done[0]: return
+                _done[0] = True
+                _cleanup()
+                lock_w = self.table.cellWidget(item.row(), COL_NAME_EDIT)
+                if lock_w:
+                    lk = lock_w.findChild(LockButton)
+                    if lk:
+                        lk.set_locked(True)
 
             def _commit():
-                if _commit_done[0]:
-                    return
-                _commit_done[0] = True
-                # Restore row height
-                self.table.setRowHeight(item.row(), ROW_HEIGHT)
+                if _done[0]: return
+                _done[0] = True
 
                 new_title = editor.text().strip()
                 if not new_title or new_title == song.title:
-                    # Cancelled — re-lock
-                    lock_w = self.table.cellWidget(item.row(), COL_NAME_EDIT)
-                    if lock_w:
-                        lk = lock_w.findChild(LockButton)
-                        if lk:
-                            lk.set_locked(True)
-                    self.table.removeCellWidget(item.row(), COL_ARTIST)
-                    self.table.removeCellWidget(item.row(), COL_SONGNAME)
+                    _done[0] = False  # allow _cancel to run
+                    _cancel()
                     return
 
                 old_title = song.title
-                # Immediately update in-memory title and cache
                 song.title = new_title
                 cache_key = str(song.path)
                 if cache_key in self.cache:
@@ -4478,8 +4561,7 @@ class MainWindow(QMainWindow):
                 if sn:
                     sn.setText(s)
 
-                self.table.removeCellWidget(item.row(), COL_ARTIST)
-                self.table.removeCellWidget(item.row(), COL_SONGNAME)
+                _cleanup()
 
                 lock_w = self.table.cellWidget(item.row(), COL_NAME_EDIT)
                 if lock_w:
@@ -4498,13 +4580,29 @@ class MainWindow(QMainWindow):
                 })
                 self._mark_task_pending(song.id, task_id, 'RENAME')
                 self._save_pending_queue()
+                self._show_toast(
+                    f'⏳  Renaming: "{new_title}"…', 2000, "info")
 
+            # Connect signals
             editor.returnPressed.connect(_commit)
+            save_btn.clicked.connect(_commit)
+            cancel_btn.clicked.connect(_cancel)
 
-            # Span the editor container across artist + song name columns
+            # Esc key to cancel
+            from PySide6.QtCore import QEvent
+            class _EscFilter(QObject):
+                def eventFilter(self, obj, event):
+                    if (event.type() == QEvent.KeyPress and
+                            event.key() == Qt.Key_Escape):
+                        _cancel()
+                        return True
+                    return False
+            _esc = _EscFilter(editor)
+            editor.installEventFilter(_esc)
+
+            # Place the container in the table
             self.table.setCellWidget(item.row(), COL_ARTIST, container)
-            # Increase row height temporarily for the tag buttons
-            self.table.setRowHeight(item.row(), ROW_HEIGHT + 24)
+            self.table.setRowHeight(item.row(), ROW_HEIGHT + 26)
             editor.setFocus()
 
     # ------------------------------------------------------------------
