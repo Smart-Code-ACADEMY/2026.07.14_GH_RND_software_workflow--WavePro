@@ -2178,6 +2178,8 @@ class MainWindow(QMainWindow):
         elif action == 'RATING' and song:
             # FIX: Sync cache with the confirmed rating from disk
             self._sync_cache(song)
+            # FIX: Restore rating lock to locked/enabled state
+            self._restore_locks_for_song(song.id, 'RATING')
 
         elif action == 'DELETE' and song:
             self.cache.pop(result.get('path', ''), None)
@@ -2202,16 +2204,63 @@ class MainWindow(QMainWindow):
             self._pulse_button(self.changes_btn, "#30D158", pulses=2)
 
     def _on_task_failed(self, task_id: str, error: str):
+        failed_sid = None
+        failed_action = ''
         for sid, state in list(self._pending_task_state.items()):
             if state.get('task_id') == task_id:
-                self._mark_task_done(sid, state.get('action', ''))
+                failed_sid = sid
+                failed_action = state.get('action', '')
+                self._mark_task_done(sid, failed_action)
                 break
+
+        # FIX: Re-enable lock buttons on failure so they don't stay frozen
+        if failed_sid:
+            self._restore_locks_for_song(failed_sid, failed_action)
+
         self._show_toast(f"Task failed: {error}", 5000, "error")
         self._update_pending_btn()
         self._save_pending_queue()
         # FIX: Pulse View Changes red on failure
         if hasattr(self, 'changes_btn'):
             self._pulse_button(self.changes_btn, "#FF453A", pulses=2)
+
+    def _restore_locks_for_song(self, sid: str, action: str):
+        """Re-enable and re-lock all lock buttons for a song after task
+        completion or failure.  Prevents locks from freezing in the
+        disabled / red-unlocked state."""
+        item = self.row_items.get(sid)
+        if item is None:
+            return
+        row = item.row()
+        if action in ('RENAME', ''):
+            lock_w = self.table.cellWidget(row, COL_NAME_EDIT)
+            if lock_w:
+                lk = lock_w.findChild(LockButton)
+                if lk:
+                    lk.setEnabled(True)
+                    lk.set_locked(True)
+        if action in ('MOVE', ''):
+            combo = self.table.cellWidget(row, COL_CATEGORY)
+            if combo:
+                lock = combo.property("lock_ref")
+                if lock:
+                    lock.setEnabled(True)
+                    lock.set_locked(True)
+                combo.setEnabled(False)  # locked = combo disabled
+        if action in ('RATING', ''):
+            star_wrap = self.table.cellWidget(row, COL_RATING)
+            if star_wrap:
+                star = star_wrap.findChild(StarRatingWidget)
+                if star is None and isinstance(star_wrap, StarRatingWidget):
+                    star = star_wrap
+                if star:
+                    star.set_editable(False)
+            lock_w2 = self.table.cellWidget(row, COL_RATING_LOCK)
+            if lock_w2:
+                lk2 = lock_w2.findChild(LockButton)
+                if lk2:
+                    lk2.setEnabled(True)
+                    lk2.set_locked(True)
 
     def _on_queue_empty(self):
         self._update_pending_btn()
@@ -2414,7 +2463,10 @@ class MainWindow(QMainWindow):
             star_wrap = self.table.cellWidget(item.row(), COL_RATING)
             if star_wrap:
                 star = star_wrap.findChild(StarRatingWidget)
-                if star: star.set_rating(rating)
+                if star is None and isinstance(star_wrap, StarRatingWidget):
+                    star = star_wrap
+                if star:
+                    star.set_rating(rating)
         # Queue the disk write
         self._queue_rating_task(song, rating)
         stars = "\u2605" * rating + "\u2606" * (5 - rating)
@@ -4070,6 +4122,8 @@ class MainWindow(QMainWindow):
                 star_wrap = self.table.cellWidget(item.row(), COL_RATING)
                 if star_wrap:
                     star = star_wrap.findChild(StarRatingWidget)
+                    if star is None and isinstance(star_wrap, StarRatingWidget):
+                        star = star_wrap
                     if star:
                         star.set_rating(song.rating)
                 return
