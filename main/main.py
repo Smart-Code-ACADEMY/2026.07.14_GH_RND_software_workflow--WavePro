@@ -1481,7 +1481,7 @@ QLabel#volIcon {
 QTableWidget {
     background:#1c1c1e; alternate-background-color:#202022;
     border:none; gridline-color:transparent;
-    selection-background-color:rgba(10,132,255,.25); selection-color:#fff; }
+    selection-background-color:rgba(10,132,255,.35); selection-color:#fff; }
 QTableWidget::item { padding:6px 4px; border-bottom:1px solid #2c2c2e; }
 QHeaderView::section {
     background:#1c1c1e; color:#8e8e93; border:none;
@@ -1498,7 +1498,7 @@ QTableCornerButton::section {
     background: #1c1c1e; border: none;
     border-bottom: 1px solid #2c2c2e; border-right: 1px solid #2c2c2e; }
 
-QTableWidget::item:selected { background:rgba(10,132,255,.22); }
+QTableWidget::item:selected { background:rgba(10,132,255,.35); }
 
 QComboBox {
     background:#2c2c2e; border:1px solid #3a3a3c; border-radius:8px;
@@ -2139,10 +2139,9 @@ class MainWindow(QMainWindow):
                 cat_sort = self.table.item(item.row(), COL_CATEGORY)
                 if cat_sort:
                     cat_sort.setText(new_cat)
-                lock = combo.property("lock_ref") if combo else None
-                if lock:
-                    lock.setEnabled(True)
-                    lock.set_locked(True)
+                if combo:
+                    combo.setEnabled(False)
+                self._restore_cat_lock_cell(song.id)
                 self.table.setRowHidden(item.row(), not self._matches(song))
             self._log_change("MOVE", result.get('title', song.title),
                              f"{result.get('old_cat','')} \u2192 {new_cat}")
@@ -2227,7 +2226,8 @@ class MainWindow(QMainWindow):
     def _restore_locks_for_song(self, sid: str, action: str):
         """Re-enable and re-lock all lock buttons for a song after task
         completion or failure.  Prevents locks from freezing in the
-        disabled / red-unlocked state."""
+        disabled / red-unlocked state.
+        Also restores Save/Cancel widgets back to lock buttons."""
         item = self.row_items.get(sid)
         if item is None:
             return
@@ -2242,11 +2242,9 @@ class MainWindow(QMainWindow):
         if action in ('MOVE', ''):
             combo = self.table.cellWidget(row, COL_CATEGORY)
             if combo:
-                lock = combo.property("lock_ref")
-                if lock:
-                    lock.setEnabled(True)
-                    lock.set_locked(True)
                 combo.setEnabled(False)  # locked = combo disabled
+            # Restore lock cell (may be Save/Cancel or LockButton)
+            self._restore_cat_lock_cell(sid)
         if action in ('RATING', ''):
             star_wrap = self.table.cellWidget(row, COL_RATING)
             if star_wrap:
@@ -2255,12 +2253,8 @@ class MainWindow(QMainWindow):
                     star = star_wrap
                 if star:
                     star.set_editable(False)
-            lock_w2 = self.table.cellWidget(row, COL_RATING_LOCK)
-            if lock_w2:
-                lk2 = lock_w2.findChild(LockButton)
-                if lk2:
-                    lk2.setEnabled(True)
-                    lk2.set_locked(True)
+            # Restore lock cell (may be Save/Cancel or LockButton)
+            self._restore_rat_lock_cell(sid)
 
     def _on_queue_empty(self):
         self._update_pending_btn()
@@ -2452,6 +2446,9 @@ class MainWindow(QMainWindow):
         song = self.player.current_song()
         if song is None:
             self._show_toast("No song playing.", 1500, "warning")
+            return
+        if song.path.suffix.lower() in TODO_EXTENSIONS:
+            self._show_toast("To-Do items cannot be rated.", 1500, "warning")
             return
         song.rating = rating
         # Update UI immediately
@@ -3177,10 +3174,8 @@ class MainWindow(QMainWindow):
                             combo.blockSignals(True)
                             combo.setCurrentText(detail)
                             combo.blockSignals(False)
-                        lock = combo.property("lock_ref") if combo else None
-                        if lock:
-                            lock.setEnabled(True)
-                            lock.set_locked(True)
+                            combo.setEnabled(False)
+                        self._restore_cat_lock_cell(song.id)
                         cat_sort = self.table.item(item.row(), COL_CATEGORY)
                         if cat_sort: cat_sort.setText(detail)
                         self.table.setRowHidden(item.row(), not self._matches(song))
@@ -3269,20 +3264,8 @@ class MainWindow(QMainWindow):
             self._show_toast("Open a music folder first.", 3000, "warning")
             return
 
-        self._suppress_rescan = True; self.watcher.blockSignals(True)
-
-        todo_dir = self.root_path / "To-Do"
-        if not todo_dir.exists():
-            try:
-                todo_dir.mkdir(parents=True, exist_ok=True)
-                self.watcher.addPath(str(todo_dir))
-                self._rebuild_cat_filter()
-            except OSError as e:
-                self._suppress_rescan = False; self.watcher.blockSignals(False)
-                self._show_toast(f"Could not create To-Do folder: {e}", 5000, "error")
-                return
-
         existing_titles = [s.title for s in self.songs_by_id.values()]
+        cats = list_categories(self.root_path) if self.root_path else []
 
         from PySide6.QtWidgets import QDialog, QCompleter
         dlg = QDialog(self)
@@ -3306,6 +3289,18 @@ class MainWindow(QMainWindow):
         name_input.setCompleter(completer)
         dlg_lay.addWidget(name_input)
 
+        cat_lbl = QLabel("Category folder:")
+        cat_lbl.setStyleSheet("font-size:13px;")
+        dlg_lay.addWidget(cat_lbl)
+
+        cat_combo = QComboBox()
+        cat_combo.setMinimumHeight(32)
+        cat_combo.addItems(cats)
+        # Default to "To-Do" if it exists, otherwise first category
+        if "To-Do" in cats:
+            cat_combo.setCurrentText("To-Do")
+        dlg_lay.addWidget(cat_combo)
+
         btn_row = QHBoxLayout()
         btn_row.addStretch()
         cancel_btn = QPushButton("Cancel")
@@ -3320,24 +3315,41 @@ class MainWindow(QMainWindow):
 
         name_input.setFocus()
         if not dlg.exec():
-            self._suppress_rescan = False; self.watcher.blockSignals(False)
             return
 
         name = name_input.text().strip()
         if not name:
-            self._suppress_rescan = False; self.watcher.blockSignals(False)
             return
+
+        selected_cat = cat_combo.currentText().strip()
+        if not selected_cat:
+            self._show_toast("No category selected.", 3000, "warning")
+            return
+
+        self._suppress_rescan = True; self.watcher.blockSignals(True)
+
+        target_dir = self.root_path / selected_cat
+        if not target_dir.exists():
+            try:
+                target_dir.mkdir(parents=True, exist_ok=True)
+                self.watcher.addPath(str(target_dir))
+                self._rebuild_cat_filter()
+            except OSError as e:
+                self._suppress_rescan = False; self.watcher.blockSignals(False)
+                self._show_toast(f"Could not create folder: {e}", 5000, "error")
+                return
+
         rat_val = 0
 
-        txt_path = todo_dir / f"{name}.txt"
+        txt_path = target_dir / f"{name}.txt"
         counter = 1
         while txt_path.exists():
-            txt_path = todo_dir / f"{name} ({counter}).txt"
+            txt_path = target_dir / f"{name} ({counter}).txt"
             counter += 1
         txt_path.write_text(f"To-Do: {name}\n", encoding="utf-8")
 
         song = Song(
-            path=txt_path, category="To-Do",
+            path=txt_path, category=selected_cat,
             title=txt_path.stem, artist="",
             rating=rat_val, duration=0.0)
         self._add_or_update(song)
@@ -3355,8 +3367,8 @@ class MainWindow(QMainWindow):
 
         self._suppress_rescan = False; self.watcher.blockSignals(False)
         self._rescan_timer.stop()
-        self._show_toast(f"\u2713  To-Do added: \"{name}\"", 3000, "success")
-        self._log_change("TODO", name, "To-Do placeholder created")
+        self._show_toast(f"\u2713  To-Do added: \"{name}\" in {selected_cat}", 3000, "success")
+        self._log_change("TODO", name, f"To-Do placeholder created in {selected_cat}")
 
     def _delete_song(self, song: Song):
         reply = QMessageBox.question(
@@ -4185,21 +4197,29 @@ class MainWindow(QMainWindow):
         self.table.setCellWidget(row, COL_CATEGORY_LOCK, _centered(lock_cat))
 
         # COL_RATING  (star widget)
-        star = StarRatingWidget(song.rating)
+        is_todo = song.path.suffix.lower() in TODO_EXTENSIONS
+        star = StarRatingWidget(0 if is_todo else song.rating)
         star.ratingChanged.connect(
             lambda new_r, sid=song.id: self._on_rating(sid, new_r))
+        if is_todo:
+            star.setVisible(False)
         self.table.setCellWidget(row, COL_RATING, star)
 
         # COL_RATING  sort item (invisible, sortable)
-        rat_sort = _InvisibleSortItem(song.rating)
+        rat_sort = _InvisibleSortItem(0 if is_todo else song.rating)
         rat_sort.setFlags(Qt.ItemIsEnabled)
         self.table.setItem(row, COL_RATING, rat_sort)
 
         # COL_RATING_LOCK
-        lock_rat = LockButton("Click to edit rating", "Editing rating…")
-        lock_rat.toggledLock.connect(
-            lambda unlocked, sid=song.id: self._on_rat_lock_toggle(sid, unlocked))
-        self.table.setCellWidget(row, COL_RATING_LOCK, _centered(lock_rat))
+        if is_todo:
+            # No rating lock for To-Do items — rating is not applicable
+            empty_w = QWidget()
+            self.table.setCellWidget(row, COL_RATING_LOCK, empty_w)
+        else:
+            lock_rat = LockButton("Click to edit rating", "Editing rating…")
+            lock_rat.toggledLock.connect(
+                lambda unlocked, sid=song.id: self._on_rat_lock_toggle(sid, unlocked))
+            self.table.setCellWidget(row, COL_RATING_LOCK, _centered(lock_rat))
 
         # COL_DELETE
         del_btn = QPushButton("\U0001f5d1")
@@ -4209,8 +4229,9 @@ class MainWindow(QMainWindow):
         del_btn.setToolTip("Delete this song")
         del_btn.setStyleSheet(
             "QPushButton{border:none;background:transparent;"
-            "color:#FF453A;font-size:14px;}"
-            "QPushButton:hover{background:rgba(255,69,58,0.15);border-radius:6px;}")
+            "color:rgba(255,69,58,0.45);font-size:14px;}"
+            "QPushButton:hover{background:rgba(255,69,58,0.15);"
+            "color:#FF453A;border-radius:6px;}")
         del_btn.clicked.connect(lambda _=False, sid=song.id: self._delete_by_id(sid))
         self.table.setCellWidget(row, COL_DELETE, _centered(del_btn, right_pad=4))
 
@@ -4235,11 +4256,13 @@ class MainWindow(QMainWindow):
         combo = self.table.cellWidget(item.row(), COL_CATEGORY)
         if combo is None:
             return
+        row = item.row()
+
         if unlocked:
             # Repopulate combo with only checked categories + current
             cur = combo.currentText()
+            original_cat = cur  # remember for cancel
             checked = self._get_checked_categories()
-            # Always include the song's own category so it's visible
             if cur and cur not in checked:
                 checked.append(cur)
             checked.sort(key=str.lower)
@@ -4249,18 +4272,189 @@ class MainWindow(QMainWindow):
             if cur in checked:
                 combo.setCurrentText(cur)
             combo.blockSignals(False)
-        combo.setEnabled(unlocked)
+            combo.setEnabled(True)
+
+            # Disconnect the auto-save on combo change
+            try:
+                combo.activated.disconnect()
+            except RuntimeError:
+                pass
+
+            # Replace lock cell with Save/Cancel buttons
+            sc_widget = QWidget()
+            sc_widget.setStyleSheet("background:transparent;border:none;")
+            sc_lay = QHBoxLayout(sc_widget)
+            sc_lay.setContentsMargins(2, 0, 2, 0)
+            sc_lay.setSpacing(2)
+
+            save_btn = QToolButton()
+            save_btn.setText("✓")
+            save_btn.setToolTip("Confirm category change")
+            save_btn.setCursor(Qt.PointingHandCursor)
+            save_btn.setFixedSize(22, 22)
+            save_btn.setStyleSheet(
+                "QToolButton{background:rgba(48,209,88,0.2);"
+                "border:1px solid rgba(48,209,88,0.5);"
+                "border-radius:4px;color:#30D158;"
+                "font-size:13px;font-weight:700;}"
+                "QToolButton:hover{background:rgba(48,209,88,0.35);}")
+            sc_lay.addWidget(save_btn)
+
+            cancel_btn = QToolButton()
+            cancel_btn.setText("✗")
+            cancel_btn.setToolTip("Cancel category change")
+            cancel_btn.setCursor(Qt.PointingHandCursor)
+            cancel_btn.setFixedSize(22, 22)
+            cancel_btn.setStyleSheet(
+                "QToolButton{background:rgba(255,69,58,0.2);"
+                "border:1px solid rgba(255,69,58,0.5);"
+                "border-radius:4px;color:#FF453A;"
+                "font-size:13px;font-weight:700;}"
+                "QToolButton:hover{background:rgba(255,69,58,0.35);}")
+            sc_lay.addWidget(cancel_btn)
+
+            self.table.setCellWidget(row, COL_CATEGORY_LOCK, sc_widget)
+
+            def _cat_save():
+                # Restore lock button first
+                self._restore_cat_lock_cell(sid)
+                combo.setEnabled(False)
+                # Re-connect combo auto-save for future unlocks
+                combo.activated.connect(
+                    lambda _idx, s=sid: self._on_cat_combo(s))
+                # Trigger the move if category changed
+                self._on_cat_combo(sid)
+
+            def _cat_cancel():
+                # Revert combo to original
+                combo.blockSignals(True)
+                combo.setCurrentText(original_cat)
+                combo.blockSignals(False)
+                combo.setEnabled(False)
+                # Re-connect combo
+                combo.activated.connect(
+                    lambda _idx, s=sid: self._on_cat_combo(s))
+                # Restore lock button
+                self._restore_cat_lock_cell(sid)
+
+            save_btn.clicked.connect(_cat_save)
+            cancel_btn.clicked.connect(_cat_cancel)
+        else:
+            combo.setEnabled(False)
+
+    def _restore_cat_lock_cell(self, sid: str):
+        """Restore the category lock column to a LockButton (locked state)."""
+        item = self.row_items.get(sid)
+        if item is None:
+            return
+        row = item.row()
+        lock_cat = LockButton("Click to change category", "Changing category…")
+        lock_cat.toggledLock.connect(
+            lambda unlocked, s=sid: self._on_cat_lock_toggle(s, unlocked))
+        combo = self.table.cellWidget(row, COL_CATEGORY)
+        if combo:
+            combo.setProperty("lock_ref", lock_cat)
+        self.table.setCellWidget(row, COL_CATEGORY_LOCK, _centered(lock_cat))
 
     def _on_rat_lock_toggle(self, sid: str, unlocked: bool):
         item = self.row_items.get(sid)
         if item is None: return
-        star_wrap = self.table.cellWidget(item.row(), COL_RATING)
-        if star_wrap:
-            star = star_wrap.findChild(StarRatingWidget)
-            if star is None and isinstance(star_wrap, StarRatingWidget):
-                star = star_wrap
-            if star:
-                star.set_editable(unlocked)
+        row = item.row()
+        star_wrap = self.table.cellWidget(row, COL_RATING)
+        if not star_wrap:
+            return
+        star = star_wrap.findChild(StarRatingWidget)
+        if star is None and isinstance(star_wrap, StarRatingWidget):
+            star = star_wrap
+        if not star:
+            return
+
+        if unlocked:
+            original_rating = star.rating()
+            star.set_editable(True)
+
+            # Disconnect auto-save signal
+            try:
+                star.ratingChanged.disconnect()
+            except RuntimeError:
+                pass
+
+            # Replace lock cell with Save/Cancel buttons
+            sc_widget = QWidget()
+            sc_widget.setStyleSheet("background:transparent;border:none;")
+            sc_lay = QHBoxLayout(sc_widget)
+            sc_lay.setContentsMargins(2, 0, 2, 0)
+            sc_lay.setSpacing(2)
+
+            save_btn = QToolButton()
+            save_btn.setText("✓")
+            save_btn.setToolTip("Confirm rating change")
+            save_btn.setCursor(Qt.PointingHandCursor)
+            save_btn.setFixedSize(22, 22)
+            save_btn.setStyleSheet(
+                "QToolButton{background:rgba(48,209,88,0.2);"
+                "border:1px solid rgba(48,209,88,0.5);"
+                "border-radius:4px;color:#30D158;"
+                "font-size:13px;font-weight:700;}"
+                "QToolButton:hover{background:rgba(48,209,88,0.35);}")
+            sc_lay.addWidget(save_btn)
+
+            cancel_btn = QToolButton()
+            cancel_btn.setText("✗")
+            cancel_btn.setToolTip("Cancel rating change")
+            cancel_btn.setCursor(Qt.PointingHandCursor)
+            cancel_btn.setFixedSize(22, 22)
+            cancel_btn.setStyleSheet(
+                "QToolButton{background:rgba(255,69,58,0.2);"
+                "border:1px solid rgba(255,69,58,0.5);"
+                "border-radius:4px;color:#FF453A;"
+                "font-size:13px;font-weight:700;}"
+                "QToolButton:hover{background:rgba(255,69,58,0.35);}")
+            sc_lay.addWidget(cancel_btn)
+
+            self.table.setCellWidget(row, COL_RATING_LOCK, sc_widget)
+
+            def _rat_save():
+                new_rating = star.rating()
+                star.set_editable(False)
+                # Re-connect auto-save signal
+                star.ratingChanged.connect(
+                    lambda new_r, s=sid: self._on_rating(s, new_r))
+                # Restore lock button
+                self._restore_rat_lock_cell(sid)
+                # Save if changed
+                if new_rating != original_rating:
+                    self._on_rating(sid, new_rating)
+
+            def _rat_cancel():
+                # Revert rating
+                star.set_rating(original_rating)
+                star.set_editable(False)
+                # Update sort key
+                rat_sort = self.table.item(row, COL_RATING)
+                if isinstance(rat_sort, _InvisibleSortItem):
+                    rat_sort.set_sort_key(original_rating)
+                # Re-connect auto-save signal
+                star.ratingChanged.connect(
+                    lambda new_r, s=sid: self._on_rating(s, new_r))
+                # Restore lock button
+                self._restore_rat_lock_cell(sid)
+
+            save_btn.clicked.connect(_rat_save)
+            cancel_btn.clicked.connect(_rat_cancel)
+        else:
+            star.set_editable(False)
+
+    def _restore_rat_lock_cell(self, sid: str):
+        """Restore the rating lock column to a LockButton (locked state)."""
+        item = self.row_items.get(sid)
+        if item is None:
+            return
+        row = item.row()
+        lock_rat = LockButton("Click to edit rating", "Editing rating…")
+        lock_rat.toggledLock.connect(
+            lambda unlocked, s=sid: self._on_rat_lock_toggle(s, unlocked))
+        self.table.setCellWidget(row, COL_RATING_LOCK, _centered(lock_rat))
 
     # ------------------------------------------------------------------
     # Selection & bulk operations
@@ -4823,6 +5017,8 @@ class MainWindow(QMainWindow):
     def _on_rating(self, sid: str, new_rating: int):
         song = self.songs_by_id.get(sid)
         if song is None: return
+        if song.path.suffix.lower() in TODO_EXTENSIONS:
+            return  # To-Do items cannot have ratings
         song.rating = new_rating
         item = self.row_items.get(sid)
         if item:
