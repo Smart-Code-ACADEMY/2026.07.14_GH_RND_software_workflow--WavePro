@@ -1481,7 +1481,7 @@ QLabel#volIcon {
 QTableWidget {
     background:#1c1c1e; alternate-background-color:#202022;
     border:none; gridline-color:transparent;
-    selection-background-color:rgba(10,132,255,.35); selection-color:#fff; }
+    selection-background-color:rgba(10,132,255,.42); selection-color:#fff; }
 QTableWidget::item { padding:6px 4px; border-bottom:1px solid #2c2c2e; }
 QHeaderView::section {
     background:#1c1c1e; color:#8e8e93; border:none;
@@ -1498,7 +1498,14 @@ QTableCornerButton::section {
     background: #1c1c1e; border: none;
     border-bottom: 1px solid #2c2c2e; border-right: 1px solid #2c2c2e; }
 
-QTableWidget::item:selected { background:rgba(10,132,255,.35); }
+QTableWidget::item:selected { background:rgba(10,132,255,.42); color:#fff; }
+QTableWidget::item:selected:!active { background:rgba(10,132,255,.42); color:#fff; }
+
+/* Category combo inside the table: when locked it is see-through, so the
+   row's selection / now-playing colour runs through this column too. */
+QComboBox#tableCatCombo:disabled {
+    background:transparent; border:1px solid rgba(255,255,255,0.12);
+    color:#d1d1d6; }
 
 QComboBox {
     background:#2c2c2e; border:1px solid #3a3a3c; border-radius:8px;
@@ -1623,6 +1630,17 @@ def _fmt_time(ms: int) -> str:
     return f"{m:02d}:{s:02d}"
 
 
+def _enum_int(value) -> int:
+    """int() of a Qt enum on every PySide6 version.
+
+    Newer PySide6 releases expose Qt enums as Python Enum members, which
+    int() rejects; older ones expose plain ints."""
+    try:
+        return int(value)
+    except TypeError:
+        return int(getattr(value, "value", 0))
+
+
 def _centered(widget: QWidget, right_pad: int = 8) -> QWidget:
     w = QWidget()
     lay = QHBoxLayout(w)
@@ -1643,6 +1661,22 @@ class _InvisibleSortItem(QTableWidgetItem):
         return super().__lt__(other)
     def set_sort_key(self, key):
         self._sort_key = key
+
+
+class _CategorySortItem(_InvisibleSortItem):
+    """Sort item for the Category column.
+
+    Keeps the category name for sorting but never paints it, so the text
+    can't show through the (transparent, locked) category combo box.
+    The cell stays selectable so the row highlight covers this column."""
+    def __init__(self, category: str = ""):
+        super().__init__((category or "").lower())
+        self._category = category or ""
+    def setText(self, text):  # noqa: N802  (Qt naming)
+        self._category = text or ""
+        self._sort_key = self._category.lower()
+    def text(self):
+        return self._category
 
 
 def _split_title(title: str) -> Tuple[str, str]:
@@ -2323,7 +2357,7 @@ class MainWindow(QMainWindow):
             self.settings.setValue("filter/christmas",  self._filter_christmas)
             self.settings.setValue("filter/cat_checks", json.dumps(self._cat_checks))
             self.settings.setValue("sort/col",   self._last_sort_col)
-            self.settings.setValue("sort/order", int(self._last_sort_order))
+            self.settings.setValue("sort/order", _enum_int(self._last_sort_order))
             last = self.player.current_song()
             if last is None and self._highlighted_id:
                 last = self.songs_by_id.get(self._highlighted_id)
@@ -2383,9 +2417,14 @@ class MainWindow(QMainWindow):
                     pass
 
             sort_col   = self.settings.value("sort/col",   COL_ARTIST, type=int)
-            sort_order = self.settings.value("sort/order", int(Qt.AscendingOrder), type=int)
+            sort_order = self.settings.value(
+                "sort/order", _enum_int(Qt.AscendingOrder), type=int)
+            if sort_order not in (0, 1):
+                sort_order = 0
             if sort_col in (COL_ARTIST, COL_SONGNAME, COL_CATEGORY, COL_RATING):
-                self.table.sortItems(sort_col, Qt.SortOrder(sort_order))
+                order_enum = (Qt.DescendingOrder if sort_order == 1
+                              else Qt.AscendingOrder)
+                self.table.sortItems(sort_col, order_enum)
 
             vol = self.settings.value("session/volume", -1, type=int)
             if 0 <= vol <= 100:
@@ -3814,6 +3853,18 @@ class MainWindow(QMainWindow):
             "QMenu{background:#2c2c2e;border:1px solid #3a3a3c;"
             "border-radius:8px;padding:6px 0;}")
 
+        def _style_cat_label(lbl, checked: bool, bold: bool = False):
+            """Checked entries are blue, unchecked entries are white —
+            the text colour always matches the checkbox next to it."""
+            color = "#0a84ff" if checked else "#f2f2f7"
+            hover = "#3399ff" if checked else "#0a84ff"
+            weight = 600 if (bold or checked) else 400
+            lbl.setStyleSheet(
+                f"QPushButton{{background:transparent;border:none;color:{color};"
+                f"font-size:12px;font-weight:{weight};text-align:left;"
+                f"padding:2px 4px;}}"
+                f"QPushButton:hover{{color:{hover};}}")
+
         cat_cbs: list = []
         self._pending_cat_change = False
 
@@ -3847,10 +3898,7 @@ class MainWindow(QMainWindow):
         all_lay.addWidget(all_cb)
 
         all_lbl = QPushButton("All Categories")
-        all_lbl.setStyleSheet(
-            "QPushButton{background:transparent;border:none;color:#0a84ff;"
-            "font-size:12px;font-weight:600;text-align:left;padding:2px;}"
-            "QPushButton:hover{color:#3399ff;}")
+        _style_cat_label(all_lbl, all_checked, bold=True)
         all_lbl.setCursor(Qt.PointingHandCursor)
         def _select_all_and_close():
             for c in self._cat_checks:
@@ -3880,10 +3928,9 @@ class MainWindow(QMainWindow):
             row_lay.addWidget(cb)
 
             lbl = QPushButton(cat)
-            lbl.setStyleSheet(
-                "QPushButton{background:transparent;border:none;color:#f2f2f7;"
-                "font-size:12px;text-align:left;padding:2px 4px;}"
-                "QPushButton:hover{color:#0a84ff;}")
+            _style_cat_label(lbl, cb.isChecked())
+            cb.toggled.connect(
+                lambda state, l=lbl: _style_cat_label(l, bool(state)))
             lbl.setCursor(Qt.PointingHandCursor)
             lbl.clicked.connect(lambda _=False, c=cat: _select_only(c))
             row_lay.addWidget(lbl, stretch=1)
@@ -3894,13 +3941,16 @@ class MainWindow(QMainWindow):
             menu.addAction(wa)
 
         def _sync_all():
+            now_all = all(cb.isChecked() for _, cb in cat_cbs)
             all_cb.blockSignals(True)
-            all_cb.setChecked(all(cb.isChecked() for _, cb in cat_cbs))
+            all_cb.setChecked(now_all)
             all_cb.blockSignals(False)
+            _style_cat_label(all_lbl, now_all, bold=True)
         for _, cb in cat_cbs:
             cb.toggled.connect(lambda _: _sync_all())
         all_cb.toggled.connect(lambda state: (
-            [cb.setChecked(state) for _, cb in cat_cbs],
+            [cb.setChecked(bool(state)) for _, cb in cat_cbs],
+            _style_cat_label(all_lbl, bool(state), bold=True),
             _on_checkbox_toggled()))
 
         menu.exec(self.cat_filter_btn.mapToGlobal(
@@ -4166,6 +4216,13 @@ class MainWindow(QMainWindow):
         song_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
         self.table.setItem(row, COL_SONGNAME, song_item)
 
+        # Selectable background items for the widget-only columns, so the
+        # selection highlight and the "now playing" tint cover the whole row.
+        for _col in (COL_NAME_EDIT, COL_CATEGORY_LOCK, COL_RATING_LOCK, COL_DELETE):
+            _bg = _InvisibleSortItem(0)
+            _bg.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            self.table.setItem(row, _col, _bg)
+
         # COL_NAME_EDIT  (lock button for title editing)
         lock_name = LockButton("Click to edit title", "Editing title…")
         lock_name.toggledLock.connect(
@@ -4174,6 +4231,7 @@ class MainWindow(QMainWindow):
 
         # COL_CATEGORY  (combo box)
         combo = QComboBox()
+        combo.setObjectName("tableCatCombo")
         combo.setFixedWidth(120)
         cats = list_categories(self.root_path) if self.root_path else []
         combo.addItems(cats)
@@ -4185,8 +4243,8 @@ class MainWindow(QMainWindow):
         self.table.setCellWidget(row, COL_CATEGORY, combo)
 
         # COL_CATEGORY  sort item (hidden text for sorting)
-        cat_sort = QTableWidgetItem(song.category)
-        cat_sort.setFlags(Qt.ItemIsEnabled)
+        cat_sort = _CategorySortItem(song.category)
+        cat_sort.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
         self.table.setItem(row, COL_CATEGORY, cat_sort)
 
         # COL_CATEGORY_LOCK
@@ -4202,12 +4260,16 @@ class MainWindow(QMainWindow):
         star.ratingChanged.connect(
             lambda new_r, sid=song.id: self._on_rating(sid, new_r))
         if is_todo:
-            star.setVisible(False)
+            # Hide the star buttons (children). Hiding the cell widget itself
+            # is not reliable: the table re-shows cell widgets on relayout.
+            for _b in star._btns:
+                _b.setVisible(False)
+            star.setToolTip("To-Do items have no rating")
         self.table.setCellWidget(row, COL_RATING, star)
 
         # COL_RATING  sort item (invisible, sortable)
         rat_sort = _InvisibleSortItem(0 if is_todo else song.rating)
-        rat_sort.setFlags(Qt.ItemIsEnabled)
+        rat_sort.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
         self.table.setItem(row, COL_RATING, rat_sort)
 
         # COL_RATING_LOCK
