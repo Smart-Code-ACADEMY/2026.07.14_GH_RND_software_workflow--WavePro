@@ -14,7 +14,8 @@ TESTS = Path(__file__).resolve().parents[2]
 for folder in sorted(TESTS.glob("0[2-5]_*")):
     sys.path.insert(0, str(folder))
 
-from keyword_library import KEYWORDS, find_keyword  # noqa: E402
+from command_log import LOG  # noqa: E402
+from keyword_library import KEYWORDS, execute_step, find_keyword  # noqa: E402
 from session import REPORTS_DIR, TestSession  # noqa: E402
 
 REPORT_DIR = REPORTS_DIR / "6b_robot_framework"
@@ -31,11 +32,18 @@ def _log_image(path: Path) -> None:
     logger.info(f'<img src="{Path(path).as_uri()}" width="800">', html=True)
 
 
+def _to_robot_log(entry: dict) -> None:
+    """Every command line also appears in Robot's log.html (under its keyword)."""
+    text = entry["command"] + (f"  -> {entry['result']}" if entry["result"] else "")
+    logger.info(f"{text}\n    = {entry['explanation']}")
+
+
 class WaveProKeywords:
     ROBOT_LIBRARY_SCOPE = "SUITE"
 
     def __init__(self):
         self._session = TestSession(REPORT_DIR)
+        LOG.listeners.append(_to_robot_log)
 
     # ---------- Robot Dynamic Library API ------------------------------
     def get_keyword_names(self):
@@ -58,7 +66,7 @@ class WaveProKeywords:
         context = self._session.context
         if context is None:
             raise RuntimeError("Wave Pro was not started.")
-        result = find_keyword(name).function(context, *args)
+        result = execute_step(context, name, args)
         screenshot = context.memory.pop("screenshot", None)
         if screenshot is not None:
             _log_image(screenshot)
@@ -72,12 +80,15 @@ class WaveProKeywords:
         self._session.end()
 
     def _start_test(self):
-        self._session.start_test()
+        full_name = BuiltIn().get_variable_value("${TEST NAME}", "test")
+        case_id, _, title = full_name.partition(" ")
+        self._session.start_test(case_id, title)
 
     def _end_test(self):
         builtin = BuiltIn()
         name = builtin.get_variable_value("${TEST NAME}", "test").split(" ")[0]
         failed = builtin.get_variable_value("${TEST STATUS}") != "PASS"
-        screenshot = self._session.end_test(name, failed)
+        message = builtin.get_variable_value("${TEST MESSAGE}", "")
+        screenshot = self._session.end_test(name, failed, message if failed else "")
         if screenshot is not None:
             _log_image(screenshot)

@@ -14,7 +14,7 @@ from typing import List
 
 import yaml
 
-from keyword_library import Context, find_keyword
+from keyword_library import Context, execute_step, find_keyword, readable
 
 TESTS_DIR = Path(__file__).resolve().parents[1]
 SPEC_FILE = TESTS_DIR / "01_what_to_test__test_specification" / "test_cases.yaml"
@@ -34,9 +34,7 @@ class StepCall:
         return find_keyword(self.name).is_check
 
     def readable(self) -> str:
-        if not self.values:
-            return self.name
-        return self.name + " " + ", ".join(f"“{v}”" for v in self.values)
+        return readable(self.name, self.values)
 
 
 @dataclass(frozen=True)
@@ -108,15 +106,11 @@ def load_specification(file: Path = SPEC_FILE) -> List[TestCase]:
     return cases
 
 
-def run_step(context: Context, call: StepCall) -> None:
-    find_keyword(call.name).function(context, *call.values)
-
-
 def run_test_case(context: Context, case: TestCase) -> None:
-    """Run all steps in order; a failure message names the step."""
+    """Run all steps in order (each logged); a failure message names the step."""
     for number, call in enumerate(case.steps, start=1):
         try:
-            run_step(context, call)
+            execute_step(context, call.name, call.values)
         except AssertionError as e:
             raise AssertionError(
                 f"{case.id} – step {number}: {call.readable()}\n  → {e}") from None

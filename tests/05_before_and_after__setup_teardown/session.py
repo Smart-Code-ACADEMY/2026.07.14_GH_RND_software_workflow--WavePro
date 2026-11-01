@@ -2,12 +2,13 @@
 
 Written ONCE, used by all three tools (6a pytest, 6b Robot, 6c pywinauto):
 
-    begin()       once before all tests:  report folder, back up your data
-    start_test()  before every test:      temporary library, start the EXE,
-                                          wait until "60 songs" is loaded
-    end_test()    after every test:       screenshot if failed, close the EXE,
-                                          delete the temporary library
-    end()         once after all tests:   restore your data exactly
+    begin()         once before all tests:  report folder, back up your data
+    start_test()    before every test:      temporary library, start the EXE,
+                                            wait until "60 songs" is loaded
+    end_test()      after every test:       screenshot if failed, close the EXE,
+                                            delete the temporary library
+    end()           once after all tests:   restore your data exactly,
+                                            save the command log (step 07)
 """
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ from typing import Optional
 import app_driver
 import profile_backup
 import temp_music_library
+from command_log import LOG
 from keyword_library import Context
 
 TESTS_DIR = Path(__file__).resolve().parents[1]
@@ -38,24 +40,29 @@ class TestSession:
 
     def begin(self) -> None:
         self.report_dir.mkdir(parents=True, exist_ok=True)
+        LOG.phase("Session start (step 05)", "Back up your real Wave Pro data before any test")
         self.guard.backup()
 
-    def start_test(self) -> Context:
+    def start_test(self, case_id: str, title: str) -> Context:
+        LOG.begin_test(case_id, title)
+        LOG.phase("Setup (step 05)", "Prepare test data and start Wave Pro")
         self._library = temp_music_library.create_test_library()
         self.guard.prepare_for_test(self._library)
         app = app_driver.WaveProApp(app_driver.find_exe(), self._library)
         self.context = Context(app, report_dir=self.report_dir)
         app.start()
+        LOG.phase("Test steps (from test_cases.yaml)", "Now the steps of the specification run")
         return self.context
 
-    def end_test(self, name: str, failed: bool) -> Optional[Path]:
+    def end_test(self, case_id: str, failed: bool, message: str = "") -> Optional[Path]:
         """Returns the path of the failure screenshot (or None)."""
+        LOG.phase("Teardown (step 05)", "Close Wave Pro and delete the test data")
         app = self.context.app if self.context else None
         screenshot = None
         try:
             if failed and app is not None and app.win is not None:
                 screenshot = app.screenshot(
-                    self.report_dir / "failure_screenshots" / f"{safe_name(name)}.png")
+                    self.report_dir / "failure_screenshots" / f"{safe_name(case_id)}.png")
         except Exception:
             screenshot = None
         finally:
@@ -66,7 +73,12 @@ class TestSession:
                 temp_music_library.remove_test_library(self._library)
             self.context = None
             self._library = None
+            LOG.end_test("FAIL" if failed else "PASS", message)
         return screenshot
 
     def end(self) -> None:
-        self.guard.restore()
+        LOG.phase("Session end (step 05)", "Restore your real Wave Pro data")
+        try:
+            self.guard.restore()
+        finally:
+            LOG.save(self.report_dir)

@@ -41,7 +41,7 @@ git status
 git log --oneline
 
 git commit -m "
-v1.1.7 - test | results
+v1.1.8 - test | setup
 
 ### TODOs / To Fix
 - rename icon remaining red > check is nwe name saving completed
@@ -52,7 +52,8 @@ v1.1.7 - test | results
 - make the delete icon clearly visible with a light saturated red color
 
 ### Fixed / Improved
-- all 3 tolls results are identical and successful
+- structure improved that every executed command is written as log together with explanation for people
+- file naming improved
 
 ### Added / New Features
 

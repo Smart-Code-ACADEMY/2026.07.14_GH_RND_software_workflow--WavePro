@@ -22,13 +22,33 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
+from command_log import LOG, call
+
 REG_KEY = r"HKCU\Software\WavePro\Wave Pro - Music Studio"
 GUARDED_FILES = ("pending_queue.json", "changelog.csv")
 DEFAULT_BACKUP_DIR = Path(__file__).resolve().parent / ".profile_backup"
 
 
+_REG_EXPLAIN = {
+    "query": "Registry: do Wave Pro settings exist?",
+    "export": "Registry: BACK UP the Wave Pro settings to a file",
+    "delete": "Registry: remove the Wave Pro settings (clean start)",
+    "add": "Registry: tell Wave Pro to open the temporary test library",
+    "import": "Registry: RESTORE your original Wave Pro settings",
+}
+
+
 def _reg(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["reg", *args], capture_output=True, text=True)
+    return call("subprocess", subprocess, "run", ["reg", *args], capture_output=True, text=True,
+                explain=_REG_EXPLAIN.get(args[0], "Registry command"))
+
+
+def _copy(src: Path, dst: Path, explain: str) -> None:
+    call("shutil", shutil, "copy2", src, dst, explain=explain)
+
+
+def _delete(path: Path, explain: str) -> None:
+    call("Path", path, "unlink", explain=explain)
 
 
 def _sha256(path: Path) -> str:
@@ -53,7 +73,8 @@ class ProfileGuard:
             self.restore()
         elif self.backup_dir.exists():        # incomplete backup:
             shutil.rmtree(self.backup_dir)    # originals were never touched
-        self.backup_dir.mkdir(parents=True)
+        call("Path", self.backup_dir, "mkdir", parents=True,
+             explain="Create the backup folder")
 
         had_key = _reg("query", REG_KEY).returncode == 0
         if had_key:
@@ -67,13 +88,17 @@ class ProfileGuard:
             src = self.appdata_dir / name
             if src.is_file():
                 dst = self.backup_dir / name
-                shutil.copy2(src, dst)
-                if _sha256(src) != _sha256(dst):
+                _copy(src, dst, f"BACK UP your {name}")
+                same = _sha256(src) == _sha256(dst)
+                LOG.check(f"sha256(original {name}) == sha256(backup)",
+                          "Is the backup an exact copy?", same)
+                if not same:
                     raise RuntimeError(f"Backup of {name} is corrupt.")
                 saved.append(name)
 
         self._complete.write_text(
             json.dumps({"had_key": had_key, "files": saved}), encoding="utf-8")
+        LOG.command(f"write {self._complete}", "Mark the backup as complete and verified")
 
     def prepare_for_test(self, library: Path) -> None:
         """Clean start: empty settings, only the test library."""
@@ -86,14 +111,14 @@ class ProfileGuard:
             raise RuntimeError(f"Writing the registry failed: {r.stderr}")
         queue = self.appdata_dir / "pending_queue.json"
         if queue.is_file():       # the original is safely in the backup
-            queue.unlink()
+            _delete(queue, "Remove unfinished tasks for the test (original is in the backup)")
 
     def forget_library_cache(self, library: Path) -> None:
         """Remove the cache file Wave Pro creates for the test library."""
         h = hashlib.md5(str(Path(library).resolve()).encode()).hexdigest()
         cache = self.appdata_dir / f"music_library_cache_{h}.json"
         if cache.is_file():
-            cache.unlink()
+            _delete(cache, "Remove the cache file Wave Pro made for the test library")
 
     def restore(self) -> None:
         if not self._complete.is_file():
@@ -110,7 +135,8 @@ class ProfileGuard:
             dst = self.appdata_dir / name
             if name in info["files"]:
                 self.appdata_dir.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(self.backup_dir / name, dst)
+                _copy(self.backup_dir / name, dst, f"RESTORE your original {name}")
             elif dst.is_file():       # did not exist before → created by a test
-                dst.unlink()
-        shutil.rmtree(self.backup_dir)
+                _delete(dst, f"Remove {name} (it did not exist before the tests)")
+        call("shutil", shutil, "rmtree", self.backup_dir,
+             explain="Remove the temporary backup folder (everything is restored)")
