@@ -1,47 +1,51 @@
 # Tests für Wave Pro (EXE)
 
-**Testfälle stehen an EINER Stelle: [`spec/testfaelle.yaml`](spec/testfaelle.yaml).**
-pytest und Robot Framework lesen diese Datei direkt und führen sie aus.
-Rahmen, Werkzeuge und Grenzen: [TESTSPEZIFIKATION.md](TESTSPEZIFIKATION.md)
+Testfälle stehen an EINER Stelle: **`00_spezifikation/testfaelle.yaml`**.
+Drei Werkzeuge lesen diese Datei und müssen dasselbe Ergebnis liefern.
 
 ## Schnellstart (Windows)
 
 1. **Wave Pro schließen.**
 2. Einmalig im Projektordner: `pip install -r tests\requirements-tests.txt`
-3. `tests\run_all.bat` starten. Dabei ca. 5 Min. Maus und Tastatur nicht benutzen.
-4. Berichte öffnen:
-   - `tests\reports\pytest_report.html`
-   - `tests\reports\robot\report.html`
+3. `tests\run_00_alle.bat` starten. Maus und Tastatur ca. 15 Min. nicht benutzen.
+4. Am Ende öffnet sich **`tests\reports\00_vergleich.html`**: alle drei Werkzeuge nebeneinander.
 
-Andere EXE als in `publish\` testen: `set WAVEPRO_EXE=C:\Pfad\WavePro.exe`
+Ein einzelnes Werkzeug: `run_01_pytest.bat`, `run_02_robot.bat` oder `run_03_pywinauto.bat`.
+Andere EXE als in `publish\`: `set WAVEPRO_EXE=C:\Pfad\WavePro.exe`
 
-## Testfall ändern oder hinzufügen
-
-1. `spec\testfaelle.yaml` bearbeiten – erlaubte Schritte stehen in `common\schritte.py`.
-2. Die Tests starten. Tippfehler werden sofort gemeldet. Die Tabelle in
-   `TESTSPEZIFIKATION.md` aktualisiert sich automatisch.
-
-## Ordner
+## Ordner (nummeriert = Reihenfolge)
 
 ```
 tests/
-├── spec/testfaelle.yaml        ★ die zentrale Testspezifikation (einzige Quelle)
-├── TESTSPEZIFIKATION.md        Begleitdokument; Tabelle wird aus der YAML erzeugt
-├── common/
+├── 00_spezifikation/
+│   ├── testfaelle.yaml         ★ zentrale Testspezifikation – nur hier Tests ändern
+│   └── TESTSPEZIFIKATION.md    Begleitdokument; Testfall-Tabelle wird automatisch erzeugt
+├── 01_pytest/                  Werkzeug 1: pytest liest die YAML
+├── 02_robot/                   Werkzeug 2: Robot Framework liest die YAML
+├── 03_pywinauto/               Werkzeug 3: pywinauto pur, ohne Testframework
+├── 09_gemeinsam/               Code, den alle drei teilen
+│   ├── wavepro.py              Motor: pywinauto-Befehle + Schutz deiner Daten
+│   ├── schritte.py             Schritt-Name → Aktion / Prüfung
+│   ├── sitzung.py              Vorbereitung + Aufräumen
 │   ├── spec.py                 liest + prüft die YAML
-│   ├── schritte.py             Schritt-Name → Aktion/Prüfung
-│   └── wavepro.py              pywinauto steuert die EXE + Schutz deiner Daten
-├── pytest_suite/               pytest liest die YAML
-├── robot_suite/                Robot Framework liest die YAML
-├── tools/erzeuge_uebersicht.py schreibt die Tabelle ins Dokument
-├── run_pytest.bat / run_robot.bat / run_all.bat
-├── requirements-tests.txt
-└── reports/                    Berichte und Screenshots (werden erzeugt)
+│   ├── erzeuge_uebersicht.py   schreibt die Tabelle ins Dokument
+│   └── vergleiche_ergebnisse.py erstellt reports/00_vergleich.html
+├── reports/                    (wird erzeugt)
+│   ├── 00_vergleich.html       alle drei Werkzeuge nebeneinander
+│   ├── 01_pytest/              report.html, junit.xml, screenshots/, fehler_screenshots/
+│   ├── 02_robot/               report.html, log.html, output.xml, screenshots/, …
+│   └── 03_pywinauto/           bericht.html, ergebnis.json, screenshots/, …
+├── run_00_alle.bat  run_01_pytest.bat  run_02_robot.bat  run_03_pywinauto.bat
+└── requirements-tests.txt
 ```
+
+## Testfall ändern
+
+`00_spezifikation\testfaelle.yaml` bearbeiten (erlaubte Schritte: `09_gemeinsam\schritte.py`)
+und einen Lauf starten. Tippfehler werden sofort gemeldet.
 
 ## Sicherheit
 
-- Gearbeitet wird nur mit einer temporären Testbibliothek. Deine Musik wird nie berührt.
-- Deine Einstellungen, die Historie und offene Aufgaben werden gesichert und
-  danach wiederhergestellt.
+- Nur eine temporäre Testbibliothek wird benutzt; deine Musik wird nie berührt.
+- Einstellungen, Historie und offene Aufgaben werden gesichert und wiederhergestellt.
 - Bricht ein Lauf ab, stellt der nächste Lauf die Sicherung automatisch wieder her.
