@@ -1,0 +1,148 @@
+# ════════════════════════════════════════════════════════════════════════
+#  STEP 01 – WHAT TO TEST  (test specification)
+#  Wave Pro – Music Studio (Windows EXE)
+# ════════════════════════════════════════════════════════════════════════
+#  This file is the ONLY place where test cases are defined.
+#  All three tools (6a pytest, 6b Robot Framework, 6c pywinauto only)
+#  read this file directly and execute exactly these steps.
+#
+#  A test case has:
+#    id         unique number (TC-xx)
+#    title      short name
+#    principle  what kind of test (start, click, pixels, …)
+#    goal       one sentence: why this test exists (information only)
+#    steps      executed top to bottom:
+#               "Step Name: value"  or  "Step Name: [value1, value2]"
+#               Steps containing "Should" are CHECKS (= expected result),
+#               all other steps are ACTIONS.
+#
+#  Allowed step names → 03_translate_steps__keyword_library/keyword_library.py
+#  (a misspelled step name is reported before any test starts).
+#
+#  Automatically before EVERY test case (step 05): a fresh temporary music
+#  library (60 silent WAV files "Artist NN - Song NN" in Pop/ and Rock/,
+#  empty folder To-Do/), start the EXE, wait until "60 songs" is loaded.
+#  After every test case: close the EXE, delete the temporary library.
+# ════════════════════════════════════════════════════════════════════════
+
+test_object: Wave Pro – Music Studio (EXE from publish/)
+version: "2.0"
+
+test_cases:
+
+  - id: TC-01
+    title: Main window appears
+    principle: Start / window
+    goal: The EXE starts reliably and quickly.
+    steps:
+      - Window Title Should Start With: Wave Pro - Music Studio
+      - Startup Time Should Be Below Seconds: 30
+
+  - id: TC-02
+    title: Labels are visible
+    principle: Read texts
+    goal: Fixed texts and buttons exist and are labelled correctly.
+    steps:
+      - Text Should Be Visible: 60 songs
+      - Text Should Be Visible: Nothing is playing
+      - Button Should Exist: Play Filtered
+      - Button Should Exist: Reset filters
+      - Button Should Exist: + To-Do
+
+  - id: TC-03
+    title: Table shows the songs
+    principle: Data in table
+    goal: All songs of the library are loaded and shown.
+    steps:
+      - Table Should Contain: Artist 01
+      - Table Should Contain: Song 01
+      - Table Should Contain: Artist 60
+      - Row Should Be In View: Artist 01
+
+  - id: TC-04
+    title: Search filters the list
+    principle: Type text
+    goal: Typing into the search box hides songs that do not match.
+    steps:
+      - Type In Search Box: Song 07
+      - Search Box Should Contain: Song 07
+      - Row Should Be Shown: Song 07
+      - Row Should Be Hidden: Song 08
+
+  - id: TC-05
+    title: Reset filters restores everything
+    principle: Click a button
+    goal: One click brings back the starting state.
+    steps:
+      - Type In Search Box: Song 07
+      - Row Should Be Hidden: Song 08
+      - Click Button: Reset filters
+      - Search Box Should Contain: ""
+      - Row Should Be Shown: Song 08
+
+  - id: TC-06
+    title: To-Do creates a file
+    principle: Dialog + file on disk
+    goal: A dialog works and creates the real .txt file.
+    steps:
+      - Click Button: + To-Do
+      - Dialog Should Appear: Add To-Do
+      - Type In Dialog: [Add To-Do, TC06 Test Song]
+      - Click In Dialog: [Add To-Do, Create To-Do]
+      - Dialog Should Be Closed: Add To-Do
+      - File Should Exist: [To-Do/TC06 Test Song.txt, "To-Do: TC06 Test Song"]
+      - Table Should Contain: TC06 Test Song
+
+  - id: TC-07
+    title: Shortcut opens dialog, Esc cancels
+    principle: Keyboard shortcut
+    goal: Ctrl+E+T works; cancelling creates no file.
+    steps:
+      - Remember Number Of Text Files:
+      - Press Ctrl+E Plus: T
+      - Dialog Should Appear: Add To-Do
+      - Press Escape:
+      - Dialog Should Be Closed: Add To-Do
+      - Number Of Text Files Should Be Unchanged:
+
+  - id: TC-08
+    title: Scrolling with End, Top and mouse wheel
+    principle: Scrolling
+    goal: Every part of the long list can be reached.
+    steps:
+      - Row Should Not Be In View: Artist 60
+      - Click Button: End
+      - Row Should Be In View: Artist 60
+      - Row Should Not Be In View: Artist 01
+      - Click Button: Top
+      - Row Should Be In View: Artist 01
+      - Scroll With Mouse Wheel: -10
+      - Row Should Not Be In View: Artist 01
+
+  - id: TC-09
+    title: Selection is blue in every column
+    principle: Visual (pixels)
+    goal: The selected row is visible across the full width.
+    steps:
+      - Click Row: Artist 02
+      - Save Screenshot: tc09_selection.png
+      - Row Should Be Blue In All Columns: Artist 02
+      - Row Should Not Be Blue: Artist 04
+
+  - id: TC-10
+    title: Controls stay reachable
+    principle: Window size
+    goal: The layout works small, maximized and on the screen.
+    steps:
+      - Window Should Fit On Screen:
+      - Resize Window: [900, 600]
+      - Button Should Be Inside Window: Reset filters
+      - Button Should Be Inside Window: End
+      - Button Should Be Inside Window: + To-Do
+      - Maximize Window:
+      - Window Should Be Maximized:
+      - Button Should Be On Screen: Reset filters
+      - Button Should Be On Screen: End
+      - Button Should Be On Screen: + To-Do
+      - Restore Window:
+      - Window Should Not Be Maximized:

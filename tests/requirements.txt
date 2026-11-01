@@ -1,0 +1,7 @@
+# Test tools for Wave Pro (Windows, Python 3.11)
+pywinauto==0.6.9      # step 04: controls the EXE (windows, buttons, mouse, keyboard)
+pytest==8.3.5         # step 06a
+pytest-html==4.1.1    # step 07: HTML report for pytest
+robotframework==7.3.2 # step 06b
+pillow==11.3.0        # screenshots and pixel measurement (TC-09)
+PyYAML==6.0.2         # step 02: reads the test specification

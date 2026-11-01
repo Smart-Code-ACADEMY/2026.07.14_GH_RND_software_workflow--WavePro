@@ -1,61 +1,44 @@
-"""
-Motor: steuert die Wave-Pro-EXE mit pywinauto – für ALLE drei Werkzeuge.
+"""STEP 04 – REAL COMMANDS  (app driver, pywinauto)
 
-01_pytest, 02_robot und 03_pywinauto benutzen genau diese Klasse.
-Dadurch führen alle Werkzeuge identische Befehle aus.
+The functions of step 03 call the methods of this class. Here are the real
+commands: start the EXE, find window/buttons/cells, click, type, press keys,
+scroll, wait, take screenshots, measure pixels.
 
-Technik: pywinauto mit "uia"-Backend (Windows UI Automation).
-Wave Pro ist eine Qt-Anwendung; Qt meldet Fenster, Buttons, Texte und
-Tabellenzellen an Windows UI Automation. pywinauto liest diese Angaben.
+Technique: pywinauto with the "uia" backend (Windows UI Automation).
+Wave Pro is a Qt application; Qt reports windows, buttons, texts and table
+cells to Windows UI Automation, and pywinauto reads them.
 
-SICHERHEIT (höchste Priorität):
-  * Die Tests benutzen NIE deine echte Musik. Jeder Test erzeugt eine
-    eigene, temporäre Testbibliothek (60 stille WAV-Dateien) in %TEMP%.
-  * Deine Wave-Pro-Einstellungen (Registry), deine Änderungshistorie
-    (changelog.csv) und offene Aufgaben (pending_queue.json) werden vor dem
-    Testlauf gesichert und danach exakt wiederhergestellt.
-  * Gelöscht wird nur, was die Tests selbst erzeugt haben – geprüft über
-    Name, Ort und eine Markierungsdatei.
+Windows detail: Qt only reports table rows that are currently visible on
+screen. Rows scrolled out of view or hidden by a filter are not reported.
 """
 from __future__ import annotations
 
 import ctypes
-import hashlib
-import json
 import os
 import re
-import shutil
 import subprocess
-import tempfile
 import time
-import wave
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, List, Optional
 
-# ── Feste Werte ─────────────────────────────────────────────────────────
+# ── Constants ───────────────────────────────────────────────────────────
 TESTS_DIR = Path(__file__).resolve().parents[1]
 PROJECT_DIR = TESTS_DIR.parent
-REPORTS_DIR = TESTS_DIR / "reports"
 
 WINDOW_TITLE_START = "Wave Pro - Music Studio"
 TITLE_RE = r"^Wave Pro - Music Studio.*"
-REG_KEY = r"HKCU\Software\WavePro\Wave Pro - Music Studio"
-GUARDED_FILES = ("pending_queue.json", "changelog.csv")
-
-SONG_COUNT = 60                       # Anzahl Testlieder
-LIB_PREFIX = "wavepro_testlib_"       # Name der temporären Testbibliothek
-LIB_MARKER = ".wavepro_test_library"  # Markierung: "von Tests erzeugt"
+SONG_COUNT = 60          # number of songs in the temporary test library
 
 VK_CONTROL, VK_ESCAPE = 0x11, 0x1B
 KEYEVENTF_KEYUP = 0x0002
 SW_MAXIMIZE, SW_RESTORE = 3, 9
 
 
-# ── Hilfstypen ──────────────────────────────────────────────────────────
+# ── Helpers ──────────────────────────────────────────────────────────
 @dataclass(frozen=True)
 class Rect:
-    """Bildschirm-Rechteck in Pixeln."""
+    """Screen rectangle in pixels."""
     left: int
     top: int
     right: int
@@ -86,7 +69,7 @@ class Rect:
 
 def wait_until(condition: Callable[[], bool], timeout: float = 10.0,
                interval: float = 0.25) -> bool:
-    """Wiederholt `condition()` bis True oder Zeitlimit. Gibt Ergebnis zurück."""
+    """Repeat `condition()` until it is True or the timeout passes."""
     end = time.monotonic() + timeout
     while True:
         try:
@@ -100,7 +83,7 @@ def wait_until(condition: Callable[[], bool], timeout: float = 10.0,
 
 
 def blue_ratio(image) -> float:
-    """Anteil 'blauer' Pixel (Auswahlfarbe) in einem PIL-Bild, 0.0 – 1.0."""
+    """Share of 'blue' pixels (selection colour) in a PIL image, 0.0 – 1.0."""
     data = image.convert("RGB").tobytes()      # r,g,b,r,g,b,…
     total = len(data) // 3
     if total == 0:
@@ -110,18 +93,18 @@ def blue_ratio(image) -> float:
     return blue / total
 
 
-# ── EXE finden ──────────────────────────────────────────────────────────
+# ── Find the EXE ──────────────────────────────────────────────────────────
 def find_exe() -> Path:
-    """Sucht die Wave-Pro-EXE.
+    """Find the Wave Pro EXE.
 
-    Reihenfolge: Umgebungsvariable WAVEPRO_EXE → Ordner publish/ →
-    Projektwurzel. Bei mehreren Kandidaten gewinnt der Name mit 'wave'."""
+    Order: environment variable WAVEPRO_EXE → folder publish/ → project
+    root. With several candidates, the one with 'wave' in its name wins."""
     env = os.environ.get("WAVEPRO_EXE", "").strip().strip('"')
     if env:
         p = Path(env)
         if p.is_file():
             return p.resolve()
-        raise FileNotFoundError(f"WAVEPRO_EXE zeigt auf keine Datei: {p}")
+        raise FileNotFoundError(f"WAVEPRO_EXE does not point to a file: {p}")
 
     for folder, pattern in ((PROJECT_DIR / "publish", "**/*.exe"),
                             (PROJECT_DIR, "*.exe")):
@@ -133,151 +116,18 @@ def find_exe() -> Path:
             return wave_named[0].resolve()
         if len(wave_named) > 1:
             raise RuntimeError(
-                "Mehrere Wave-Pro-EXE gefunden – bitte WAVEPRO_EXE setzen:\n  "
+                "Several Wave Pro EXE files found – please set WAVEPRO_EXE:\n  "
                 + "\n  ".join(map(str, wave_named)))
         if len(found) == 1:
             return found[0].resolve()
     raise FileNotFoundError(
-        "Keine Wave-Pro-EXE gefunden (publish/ oder Projektwurzel). "
-        "Tipp: set WAVEPRO_EXE=C:\\Pfad\\WavePro.exe")
+        "No Wave Pro EXE found (publish/ or project root). "
+        "Tip: set WAVEPRO_EXE=C:\\path\\WavePro.exe")
 
 
-# ── Testbibliothek (temporäre Musikordner) ──────────────────────────────
-def song_title(i: int) -> str:
-    return f"Artist {i:02d} - Song {i:02d}"
-
-
-def create_test_library(count: int = SONG_COUNT) -> Path:
-    """Erzeugt <TEMP>/wavepro_testlib_xxx mit Pop/, Rock/, To-Do/.
-
-    Ungerade Nummern → Pop, gerade → Rock. Jede Datei: 0,5 s Stille (WAV)."""
-    root = Path(tempfile.mkdtemp(prefix=LIB_PREFIX)).resolve()
-    (root / LIB_MARKER).write_text(
-        "Von den Wave-Pro-Tests erzeugt. Darf gelöscht werden.\n",
-        encoding="utf-8")
-    for cat in ("Pop", "Rock", "To-Do"):
-        (root / cat).mkdir()
-    for i in range(1, count + 1):
-        cat = "Pop" if i % 2 else "Rock"
-        with wave.open(str(root / cat / f"{song_title(i)}.wav"), "wb") as w:
-            w.setnchannels(1)
-            w.setsampwidth(2)
-            w.setframerate(8000)
-            w.writeframes(b"\x00\x00" * 4000)
-    return root
-
-
-def remove_test_library(root: Path) -> None:
-    """Löscht NUR eine von uns erzeugte Testbibliothek (3-fach geprüft)."""
-    root = Path(root).resolve()
-    temp = Path(tempfile.gettempdir()).resolve()
-    if not (root.name.startswith(LIB_PREFIX)
-            and root.parent == temp
-            and (root / LIB_MARKER).is_file()):
-        raise RuntimeError(f"Sicherheitsstopp: {root} ist keine Testbibliothek.")
-    shutil.rmtree(root, ignore_errors=True)
-
-
-# ── Schutz deines echten Wave-Pro-Profils ───────────────────────────────
-def _reg(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["reg", *args], capture_output=True, text=True)
-
-
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-class ProfileGuard:
-    """Sichert und restauriert Einstellungen + Historie des echten Benutzers.
-
-    Ablauf: backup() einmal vor allen Tests → prepare_for_test() vor jedem
-    Test → restore() einmal nach allen Tests.
-    Regel: Es wird erst etwas verändert, wenn die Sicherung vollständig
-    und geprüft ist (Datei COMPLETE). Stürzt ein Lauf ab, stellt der
-    nächste Lauf zuerst die alte Sicherung wieder her."""
-
-    def __init__(self, backup_dir: Optional[Path] = None,
-                 appdata_dir: Optional[Path] = None):
-        self.backup_dir = Path(backup_dir or TESTS_DIR / ".profile_backup")
-        self.appdata_dir = Path(appdata_dir or (
-            Path(os.environ.get("APPDATA", Path.home()))
-            / "WavePro" / "Wave Pro - Music Studio"))
-
-    @property
-    def _complete(self) -> Path:
-        return self.backup_dir / "COMPLETE"
-
-    def backup(self) -> None:
-        if self._complete.is_file():          # früherer Lauf abgebrochen
-            self.restore()
-        elif self.backup_dir.exists():        # Sicherung unvollständig:
-            shutil.rmtree(self.backup_dir)    # Originale wurden nie berührt
-        self.backup_dir.mkdir(parents=True)
-
-        had_key = _reg("query", REG_KEY).returncode == 0
-        if had_key:
-            reg_file = self.backup_dir / "settings.reg"
-            r = _reg("export", REG_KEY, str(reg_file), "/y")
-            if r.returncode != 0 or not reg_file.is_file():
-                raise RuntimeError(f"Registry-Sicherung fehlgeschlagen: {r.stderr}")
-
-        saved = []
-        for name in GUARDED_FILES:
-            src = self.appdata_dir / name
-            if src.is_file():
-                dst = self.backup_dir / name
-                shutil.copy2(src, dst)
-                if _sha256(src) != _sha256(dst):
-                    raise RuntimeError(f"Sicherung von {name} ist fehlerhaft.")
-                saved.append(name)
-
-        self._complete.write_text(
-            json.dumps({"had_key": had_key, "files": saved}), encoding="utf-8")
-
-    def prepare_for_test(self, library: Path) -> None:
-        """Sauberer Start: leere Einstellungen, nur die Testbibliothek."""
-        if not self._complete.is_file():
-            raise RuntimeError("Sicherheitsstopp: keine vollständige Sicherung.")
-        _reg("delete", REG_KEY, "/f")
-        r = _reg("add", REG_KEY, "/v", "root_path", "/t", "REG_SZ",
-                 "/d", str(Path(library).resolve()), "/f")
-        if r.returncode != 0:
-            raise RuntimeError(f"Registry-Eintrag fehlgeschlagen: {r.stderr}")
-        queue = self.appdata_dir / "pending_queue.json"
-        if queue.is_file():   # Original liegt geprüft in der Sicherung
-            queue.unlink()
-
-    def forget_library_cache(self, library: Path) -> None:
-        """Entfernt die Cache-Datei, die Wave Pro für die Testbibliothek anlegt."""
-        h = hashlib.md5(str(Path(library).resolve()).encode()).hexdigest()
-        cache = self.appdata_dir / f"music_library_cache_{h}.json"
-        if cache.is_file():
-            cache.unlink()
-
-    def restore(self) -> None:
-        if not self._complete.is_file():
-            return
-        info = json.loads(self._complete.read_text(encoding="utf-8"))
-        _reg("delete", REG_KEY, "/f")
-        if info["had_key"]:
-            r = _reg("import", str(self.backup_dir / "settings.reg"))
-            if r.returncode != 0:
-                raise RuntimeError(
-                    f"Registry-Wiederherstellung fehlgeschlagen: {r.stderr}\n"
-                    f"Sicherung bleibt erhalten in: {self.backup_dir}")
-        for name in GUARDED_FILES:
-            dst = self.appdata_dir / name
-            if name in info["files"]:
-                self.appdata_dir.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(self.backup_dir / name, dst)
-            elif dst.is_file():       # gab es vorher nicht → vom Test erzeugt
-                dst.unlink()
-        shutil.rmtree(self.backup_dir)
-
-
-# ── Die App-Steuerung ───────────────────────────────────────────────────
+# ── The app driver ───────────────────────────────────────────────────
 def _make_dpi_aware() -> None:
-    """Pixelgenaue Koordinaten auch bei Windows-Skalierung (125 %, 150 % …)."""
+    """Exact pixel coordinates even with Windows scaling (125 %, 150 % …)."""
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
     except Exception:
@@ -288,12 +138,12 @@ def _make_dpi_aware() -> None:
 
 
 def _button_regex(name: str) -> str:
-    # Buttons haben teils Symbole davor ("▶  Play Filtered", "⤓ End").
+    # Some buttons have a symbol in front ("▶  Play Filtered", "⤓ End").
     return rf"^(?:.*\s)?{re.escape(name)}$"
 
 
 class WaveProApp:
-    """Startet, bedient und prüft die Wave-Pro-EXE (eine Instanz pro Test)."""
+    """Starts, operates and inspects the Wave Pro EXE (one instance per test)."""
 
     def __init__(self, exe: Path, library: Path):
         self.exe = Path(exe)
@@ -304,13 +154,13 @@ class WaveProApp:
         self.startup_seconds: Optional[float] = None
         self._desktop = None
 
-    # ---------- Start / Ende -------------------------------------------
+    # ---------- Start / stop -------------------------------------------
     def start(self, timeout: float = 60.0) -> None:
         _make_dpi_aware()
         from pywinauto import Desktop
         self._desktop = Desktop(backend="uia")
         if self._desktop.window(title_re=TITLE_RE).exists(timeout=1):
-            raise RuntimeError("Wave Pro läuft bereits. Bitte zuerst schließen.")
+            raise RuntimeError("Wave Pro is already running. Please close it first.")
 
         t0 = time.monotonic()
         self.proc = subprocess.Popen([str(self.exe)], cwd=str(self.exe.parent))
@@ -320,7 +170,7 @@ class WaveProApp:
         self.startup_seconds = time.monotonic() - t0
 
         if not self.wait_for_text(f"{SONG_COUNT} songs", timeout=timeout):
-            raise TimeoutError("Testbibliothek wurde nicht vollständig geladen.")
+            raise TimeoutError("The test library was not loaded completely.")
         self.win.set_focus()
 
     def close(self) -> None:
@@ -335,14 +185,14 @@ class WaveProApp:
             except subprocess.TimeoutExpired:
                 subprocess.run(["taskkill", "/PID", str(self.proc.pid), "/T", "/F"],
                                capture_output=True)
-        # PyInstaller-"onefile": Fenster gehört einem Kindprozess.
+        # PyInstaller "onefile": the window belongs to a child process.
         if self._desktop is not None and self._desktop.window(
                 title_re=TITLE_RE).exists(timeout=2):
             subprocess.run(["taskkill", "/IM", self.exe.name, "/T", "/F"],
                            capture_output=True)
         self.win = None
 
-    # ---------- Fenster ------------------------------------------------
+    # ---------- Window ------------------------------------------------
     def window_title(self) -> str:
         return self.win.window_text()
 
@@ -351,7 +201,7 @@ class WaveProApp:
 
     def screen_rect(self) -> Rect:
         m = ctypes.windll.user32.GetSystemMetrics
-        x, y = m(76), m(77)                   # virtueller Bildschirm
+        x, y = m(76), m(77)                   # virtual screen (all monitors)
         return Rect(x, y, x + m(78), y + m(79))
 
     def resize_window(self, width: int, height: int) -> None:
@@ -371,7 +221,7 @@ class WaveProApp:
     def is_maximized(self) -> bool:
         return bool(ctypes.windll.user32.IsZoomed(self.win.handle))
 
-    # ---------- Texte & Buttons ----------------------------------------
+    # ---------- Texts & buttons ----------------------------------------
     def text_exists(self, text: str) -> bool:
         return self.win_spec.child_window(
             title=text, control_type="Text").exists(timeout=0)
@@ -394,9 +244,9 @@ class WaveProApp:
         self._button(name).wrapper_object().click_input()
         time.sleep(0.4)
 
-    # ---------- Suchfeld -----------------------------------------------
+    # ---------- Search box -----------------------------------------------
     def _search_box(self):
-        # Einziges Texteingabefeld im Hauptfenster (hat keinen eigenen Namen).
+        # The only text input in the main window (it has no name of its own).
         return self.win_spec.child_window(control_type="Edit", found_index=0)
 
     def type_search(self, text: str) -> None:
@@ -418,36 +268,36 @@ class WaveProApp:
                 continue
         return ""
 
-    # ---------- Tabelle ------------------------------------------------
+    # ---------- Table ------------------------------------------------
     def _table(self):
         for ct in ("Table", "DataGrid"):
             spec = self.win_spec.child_window(control_type=ct)
             if spec.exists(timeout=0):
                 return spec
-        raise LookupError("Songtabelle nicht gefunden.")
+        raise LookupError("Song table not found.")
 
     def table_rect(self) -> Rect:
         return Rect.from_pywinauto(self._table().wrapper_object().rectangle())
 
     def _cell(self, text: str):
-        # Achtung Windows: Qt meldet nur Zeilen, die gerade auf dem Bildschirm
-        # zu sehen sind. Weggescrollte oder weggefilterte Zeilen fehlen hier.
+        # Windows: Qt only reports rows currently visible on screen.
+        # Rows scrolled away or hidden by a filter are missing here.
         return self._table().child_window(title=text, visible_only=False)
 
     def cell_rect(self, text: str) -> Optional[Rect]:
-        """Position der Zelle im JETZT sichtbaren Bereich, sonst None."""
+        """Position of the cell in the CURRENTLY visible area, otherwise None."""
         spec = self._cell(text)
         if not spec.exists(timeout=0):
             return None
         return Rect.from_pywinauto(spec.wrapper_object().rectangle())
 
     def _visible_cell_names(self) -> tuple:
-        """Namen der gerade sichtbaren Zellen (erkennt das Listenende)."""
+        """Names of the currently visible cells (used to detect the list end)."""
         return tuple(c.window_text() for c in self._table().wrapper_object().children())
 
     def cell_exists(self, text: str) -> bool:
-        """Steht der Text irgendwo in der Tabelle? Scrollt dafür durch die
-        ganze Liste und danach wieder nach oben."""
+        """Is the text anywhere in the table? Scrolls through the whole list
+        if needed, then back to the top."""
         if wait_until(lambda: self.cell_rect(text) is not None, timeout=2):
             return True
         try:
@@ -457,17 +307,17 @@ class WaveProApp:
                 if self.cell_rect(text) is not None:
                     return True
                 current = self._visible_cell_names()
-                if current == previous:                   # Ende erreicht
+                if current == previous:                   # end of list reached
                     return False
                 previous = current
-                self.wheel_scroll_table(-3)               # 3 Raster nach unten
+                self.wheel_scroll_table(-3)               # 3 notches down
             return False
         finally:
-            self.scroll_table_to_top()                    # zurück nach oben
+            self.scroll_table_to_top()                    # back to the top
 
     def scroll_table_to_top(self) -> None:
-        """In kleinen Schritten nach oben, bis sich nichts mehr bewegt.
-        (Ein einzelnes Mausrad-Ereignis scrollt höchstens eine Seite.)"""
+        """Scroll up in small steps until nothing moves any more.
+        (One mouse-wheel event scrolls at most one page.)"""
         previous = None
         for _ in range(200):
             current = self._visible_cell_names()
@@ -477,20 +327,20 @@ class WaveProApp:
             self.wheel_scroll_table(+5)
 
     def is_row_shown(self, text: str) -> bool:
-        """Zeile nicht weggefiltert (ausgeblendete Zeilen haben Fläche 0)."""
+        """Row is not hidden by a filter (hidden rows have no area)."""
         r = self.cell_rect(text)
         return r is not None and not r.is_empty
 
     def is_row_in_view(self, text: str) -> bool:
-        """Zeile liegt im sichtbaren Bereich der Tabelle (nicht weggescrollt)."""
+        """Row lies inside the visible area of the table (not scrolled away)."""
         r = self.cell_rect(text)
         return r is not None and not r.is_empty and self.table_rect().contains(r)
 
     def wheel_scroll_table(self, notches: int) -> None:
-        """Mausrad über der Tabelle; negative Zahl = nach unten."""
+        """Mouse wheel over the table; negative number = down."""
         self.win.set_focus()
         table = self._table().wrapper_object()
-        # coords=(None, None) → Mitte der Tabelle (pywinauto rechnet relativ).
+        # coords=(None, None) → centre of the table (pywinauto uses relative coords).
         table.wheel_mouse_input(wheel_dist=notches)
         time.sleep(0.6)
 
@@ -500,7 +350,7 @@ class WaveProApp:
         self._park_mouse()
 
     def _park_mouse(self) -> None:
-        """Maus weg von der Tabelle (keine Tooltips/Hover im Screenshot)."""
+        """Move the mouse away from the table (no tooltips/hover in screenshots)."""
         from pywinauto import mouse
         w = self.window_rect()
         mouse.move(coords=(w.left + 60, w.top + 45))
@@ -509,7 +359,7 @@ class WaveProApp:
     def _row_cells(self, text: str) -> List[Rect]:
         anchor = self.cell_rect(text)
         if anchor is None or anchor.is_empty:
-            raise LookupError(f"Zeile '{text}' ist nicht sichtbar.")
+            raise LookupError(f"Row '{text}' is not visible.")
         cells = []
         for child in self._table().wrapper_object().children():
             r = Rect.from_pywinauto(child.rectangle())
@@ -519,7 +369,7 @@ class WaveProApp:
         return sorted(cells, key=lambda c: c.left)
 
     def row_blue_ratios(self, text: str) -> List[float]:
-        """Für jede Spalte der Zeile: Anteil blauer Pixel (Auswahlfarbe)."""
+        """For each column of the row: share of blue pixels (selection colour)."""
         from PIL import ImageGrab
         ratios = []
         for c in self._row_cells(text):
@@ -536,14 +386,14 @@ class WaveProApp:
                        all_screens=True).save(path)
         return path
 
-    # ---------- Dialoge ------------------------------------------------
+    # ---------- Dialogs ------------------------------------------------
     def _find_dialog(self, title: str):
-        """Sucht einen SICHTBAREN Dialog. (exists() würde auch versteckte
-        finden – Qt versteckt geschlossene Dialoge nur, statt sie zu löschen.)"""
+        """Find a VISIBLE dialog. (exists() would also find hidden ones –
+        Qt only hides closed dialogs instead of deleting them.)"""
         from pywinauto import findwindows
         searches = (
-            dict(top_level_only=True),                       # eigenes Fenster
-            dict(top_level_only=False, control_type="Window",  # unter Hauptfenster
+            dict(top_level_only=True),                       # own top-level window
+            dict(top_level_only=False, control_type="Window",  # below the main window
                  parent=self.win.element_info),
         )
         for extra in searches:
@@ -575,14 +425,14 @@ class WaveProApp:
         dlg.child_window(title=button, control_type="Button").wrapper_object().click_input()
         time.sleep(0.4)
 
-    # ---------- Tastatur -----------------------------------------------
+    # ---------- Keyboard -----------------------------------------------
     @staticmethod
     def _key(vk: int, up: bool = False) -> None:
         ctypes.windll.user32.keybd_event(vk, 0, KEYEVENTF_KEYUP if up else 0, 0)
         time.sleep(0.06)
 
     def press_ctrl_e_plus(self, letter: str) -> None:
-        """Wave-Pro-Kürzel: Strg + E gedrückt halten, dann Buchstabe tippen."""
+        """Wave Pro shortcut: hold Ctrl + E, then tap a letter."""
         self.win.set_focus()
         vk = ord(letter.upper())
         for k in (VK_CONTROL, ord("E")):
@@ -598,6 +448,6 @@ class WaveProApp:
         self._key(VK_ESCAPE, up=True)
         time.sleep(0.4)
 
-    # ---------- Dateien in der Testbibliothek --------------------------
+    # ---------- Files in the test library --------------------------
     def library_files(self, pattern: str = "**/*") -> List[Path]:
         return sorted(p for p in self.library.glob(pattern) if p.is_file())
