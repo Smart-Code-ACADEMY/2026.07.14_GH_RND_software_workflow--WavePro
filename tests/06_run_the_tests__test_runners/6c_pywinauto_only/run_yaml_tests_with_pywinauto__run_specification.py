@@ -7,7 +7,7 @@ its own report:
     07_results__reports/6c_pywinauto_only/report.html   – for people
     07_results__reports/6c_pywinauto_only/results.json  – for the comparison
 
-Call: python 06_run_the_tests__test_runners/6c_pywinauto_only/run_specification.py
+Call: python 06_run_the_tests__test_runners/6c_pywinauto_only/run_yaml_tests_with_pywinauto__run_specification.py
 """
 import html
 import json
@@ -20,7 +20,7 @@ TESTS = Path(__file__).resolve().parents[2]
 for folder in sorted(TESTS.glob("0[2-5]_*")):
     sys.path.insert(0, str(folder))
 
-from command_log import LOG, html_table, inline_style  # noqa: E402
+from command_log import KEYS_SCRIPT, LOG, html_table, inline_style  # noqa: E402
 from session import REPORTS_DIR, TestSession  # noqa: E402
 from spec_loader import load_specification, run_test_case  # noqa: E402
 
@@ -80,12 +80,14 @@ def _html(results) -> str:
     return f"""<!doctype html><html lang="en"><meta charset="utf-8">
 <title>6c pywinauto only – report</title>
 {inline_style()}
-<style>pre{{margin:0;white-space:pre-wrap}}</style>
+<style>pre{{margin:0;white-space:pre-wrap}} table{{border-collapse:collapse}}
+td,th{{border:1px solid #ccc;padding:6px 10px;vertical-align:top}} th{{background:#eee}}</style>
 <h1>6c pywinauto only – {passed}/{len(results)} passed</h1>
 <p>Created {time.strftime('%Y-%m-%d %H:%M')} from 01_what_to_test__test_specification/test_cases.yaml ·
-<a href="command_log.html">Full command log of the whole run</a></p>
+<a href="command_log.html">Full command log of the whole run</a> ·
+Zoomed in? Use ← → to scroll sideways.</p>
 <table><tr><th>ID</th><th>Title</th><th>Result</th><th>Duration</th><th>Message</th></tr>
-{''.join(rows)}</table></html>"""
+{''.join(rows)}</table>{KEYS_SCRIPT}</html>"""
 
 
 if __name__ == "__main__":

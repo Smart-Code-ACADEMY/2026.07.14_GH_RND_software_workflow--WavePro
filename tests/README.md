@@ -67,6 +67,9 @@ left the command exactly as executed (with its result), right what it does in pl
 The same lines are saved for every tool in `07_results__reports/<tool>/command_log.html`
 (also `.txt` and `.json`), and they appear inside pytest's `report.html` and Robot's `log.html`.
 Polling loops ("check every 0.25 s until …") are one line with the number of tries.
+The HTML log has a last column **"Executed in (file:line)"** – e.g.
+`04_real_commands__app_driver/app_driver.py:206` – the exact source line of each command.
+When you zoom in, use **← →** to scroll sideways (Shift + ← → = faster).
 `00_comparison_of_all_tools.html` also checks that all three tools ran the **same commands**.
 
 ## Change or add a test case

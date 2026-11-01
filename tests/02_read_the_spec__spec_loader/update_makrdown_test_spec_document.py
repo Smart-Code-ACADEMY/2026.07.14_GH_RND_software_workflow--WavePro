@@ -4,8 +4,8 @@ The part between AUTO-START and AUTO-END is generated from test_cases.yaml,
 so the document always shows exactly what the tools execute.
 Do not edit that part by hand – edit test_cases.yaml instead.
 
-    python 02_read_the_spec__spec_loader/update_spec_document.py           update
-    python 02_read_the_spec__spec_loader/update_spec_document.py --check   only check
+    python 02_read_the_spec__spec_loader/update_makrdown_test_spec_document.py           update
+    python 02_read_the_spec__spec_loader/update_makrdown_test_spec_document.py --check   only check
 """
 import sys
 from pathlib import Path
@@ -53,7 +53,7 @@ def main() -> int:
     new = new_content(old)
     if "--check" in sys.argv:
         if new != old:
-            print("OUTDATED: run update_spec_document.py")
+            print("OUTDATED: run update_makrdown_test_spec_document.py")
             return 1
         print(f"OK: {DOCUMENT.name} matches {SPEC_FILE.name}")
         return 0

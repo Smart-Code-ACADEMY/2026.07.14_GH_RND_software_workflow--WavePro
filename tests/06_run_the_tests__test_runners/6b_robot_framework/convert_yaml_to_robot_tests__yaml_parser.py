@@ -5,7 +5,7 @@ builds a Robot test suite from test_cases.yaml: one Robot test per test
 case, one Robot step per YAML step.
 
 Call (see run_6b_robot_framework.bat):
-    python -m robot --parser 06_run_the_tests__test_runners/6b_robot_framework/yaml_parser.py
+    python -m robot --parser 06_run_the_tests__test_runners/6b_robot_framework/convert_yaml_to_robot_tests__yaml_parser.py
                     01_what_to_test__test_specification/test_cases.yaml
 """
 import sys
@@ -23,7 +23,7 @@ from spec_loader import load_specification  # noqa: E402
 EXTENSION = ".yaml"
 # IMPORTANT: as_posix() = path with "/". With Windows "\" Robot would read the
 # characters as escapes ("\t" = tab) and not find the library.
-LIBRARY = Path(__file__).with_name("WaveProKeywords.py").as_posix()
+LIBRARY = Path(__file__).with_name("run_shared_steps_with_robot__robot_keywords.py").as_posix()
 
 
 def parse(source: Path, defaults=None) -> TestSuite:

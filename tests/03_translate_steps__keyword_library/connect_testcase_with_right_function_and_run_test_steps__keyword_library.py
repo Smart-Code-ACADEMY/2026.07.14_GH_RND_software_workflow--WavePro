@@ -2,7 +2,7 @@
 
 Every step name used in 01_what_to_test__test_specification/test_cases.yaml
 is translated HERE into a Python function. Each function calls the real
-commands of step 04 (app_driver.py).
+commands of step 04 (commands-to-interact-your-app_app_driver.py).
 
 All three tools (6a pytest, 6b Robot Framework, 6c pywinauto only) run steps
 through `execute_step(...)` below – so a step behaves identically everywhere

@@ -16,7 +16,7 @@
 #               Steps containing "Should" are CHECKS (= expected result),
 #               all other steps are ACTIONS.
 #
-#  Allowed step names → 03_translate_steps__keyword_library/keyword_library.py
+#  Allowed step names → 03_translate_steps__keyword_library/connect_testcase_with_right_function_and_run_test_steps__keyword_library.py
 #  (a misspelled step name is reported before any test starts).
 #
 #  Automatically before EVERY test case (step 05): a fresh temporary music

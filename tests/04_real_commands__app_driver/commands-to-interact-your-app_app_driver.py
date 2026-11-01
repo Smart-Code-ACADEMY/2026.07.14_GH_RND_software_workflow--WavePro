@@ -4,7 +4,7 @@ The functions of step 03 call the methods of this class. Here are the real
 commands: start the EXE, find window/buttons/cells, click, type, press keys,
 scroll, wait, take screenshots, measure pixels.
 
-EVERY real command runs through `call(...)` from command_log.py, so it is
+EVERY real command runs through `call(...)` from write-down-every-executed-command_command_log.py, so it is
 written to the terminal and the reports – left the exact command, right a
 plain-English explanation.
 

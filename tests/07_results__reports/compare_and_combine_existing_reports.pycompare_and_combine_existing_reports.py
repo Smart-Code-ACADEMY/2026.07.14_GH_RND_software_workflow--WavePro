@@ -12,7 +12,7 @@ executed the SAME commands in the same order ("Same commands?"). Values that
 change on every run are ignored: the random name of the temporary music
 folder, each tool's own report folder and measured numbers (times, pixel shares).
 
-Call: python 07_results__reports/compare_results.py
+Call: python 07_results__reports/compare_and_combine_existing_reports.pycompare_and_combine_existing_reports.py
 """
 import html
 import json
@@ -26,6 +26,7 @@ TESTS = Path(__file__).resolve().parents[1]
 for folder in sorted(TESTS.glob("0[2-5]_*")):
     sys.path.insert(0, str(folder))
 
+from command_log import KEYS_SCRIPT  # noqa: E402
 from session import REPORTS_DIR  # noqa: E402
 from spec_loader import load_specification  # noqa: E402
 
@@ -139,7 +140,7 @@ Disagreements: <b>{disagreements}</b> (must be 0). Hover over a cell to see the 
 <a href="6c_pywinauto_only/command_log.html">6c pywinauto only</a></p>
 <table><tr><th>ID</th><th>Test case</th>{head}<th>Same result?</th><th>Same commands?</th></tr>
 {''.join(rows)}
-<tr><td></td><td><b>Passed</b></td>{''.join(totals)}<td></td><td></td></tr></table></html>"""
+<tr><td></td><td><b>Passed</b></td>{''.join(totals)}<td></td><td></td></tr></table>{KEYS_SCRIPT}</html>"""
     target = REPORTS_DIR / "00_comparison_of_all_tools.html"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(page, encoding="utf-8")
