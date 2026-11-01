@@ -1,0 +1,82 @@
+[
+  {
+    "id": "TC-01",
+    "title": "Main window appears",
+    "status": "PASS",
+    "message": "",
+    "duration_s": 16.1,
+    "screenshot": ""
+  },
+  {
+    "id": "TC-02",
+    "title": "Labels are visible",
+    "status": "PASS",
+    "message": "",
+    "duration_s": 20.6,
+    "screenshot": ""
+  },
+  {
+    "id": "TC-03",
+    "title": "Table shows the songs",
+    "status": "PASS",
+    "message": "",
+    "duration_s": 118.3,
+    "screenshot": ""
+  },
+  {
+    "id": "TC-04",
+    "title": "Search filters the list",
+    "status": "PASS",
+    "message": "",
+    "duration_s": 23.1,
+    "screenshot": ""
+  },
+  {
+    "id": "TC-05",
+    "title": "Reset filters restores everything",
+    "status": "PASS",
+    "message": "",
+    "duration_s": 25.4,
+    "screenshot": ""
+  },
+  {
+    "id": "TC-06",
+    "title": "To-Do creates a file",
+    "status": "PASS",
+    "message": "",
+    "duration_s": 26.0,
+    "screenshot": ""
+  },
+  {
+    "id": "TC-07",
+    "title": "Shortcut opens dialog, Esc cancels",
+    "status": "PASS",
+    "message": "",
+    "duration_s": 19.1,
+    "screenshot": ""
+  },
+  {
+    "id": "TC-08",
+    "title": "Scrolling with End, Top and mouse wheel",
+    "status": "PASS",
+    "message": "",
+    "duration_s": 39.0,
+    "screenshot": ""
+  },
+  {
+    "id": "TC-09",
+    "title": "Selection is blue in every column",
+    "status": "PASS",
+    "message": "",
+    "duration_s": 30.6,
+    "screenshot": ""
+  },
+  {
+    "id": "TC-10",
+    "title": "Controls stay reachable",
+    "status": "PASS",
+    "message": "",
+    "duration_s": 25.0,
+    "screenshot": ""
+  }
+]

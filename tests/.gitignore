@@ -1,6 +1,2 @@
-# step 07: generated results (the compare script itself is kept)
-07_results__reports/*
-!07_results__reports/compare_results.py
-# step 05: temporary backup of your Wave Pro data during a run
 05_before_and_after__setup_teardown/.profile_backup/
 __pycache__/
