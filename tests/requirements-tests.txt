@@ -1,0 +1,6 @@
+# Testwerkzeuge für Wave Pro (Windows, Python 3.11)
+pywinauto==0.6.9
+pytest==8.3.5
+pytest-html==4.1.1
+robotframework==7.3.2
+pillow==11.3.0

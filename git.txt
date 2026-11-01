@@ -31,6 +31,7 @@ Entferne keine Funktionalitäten, ändere keine Funktionalitäten, nur es ist no
 v0.0.1 - project structure set up
 v1.6.0 - .exe release | beta
 v1.5.4 - .exe release | gamma
+v1.5.4 - test
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 git log --oneline
 git status
@@ -39,7 +40,8 @@ git status
 git log --oneline
 
 git commit -m "
-v1.1.0 - .exe release | gamma
+v1.1.1 - test
+
 
 ### TODOs / To Fix
 - rename icon remaining red > check is nwe name saving completed
@@ -50,19 +52,22 @@ v1.1.0 - .exe release | gamma
 - make the delete icon clearly visible with a light saturated red color
 
 ### Fixed / Improved
-- fixed the blue row selection highlight so it is consistent and fully visible across every column including the category column
-- ensured All Categories shows both the checkbox and blue text when selected
-- added git.txt
-- build.py universal structured and automated
-- project structure improved
-- requirements_python-3.11.9.txt creation automated
 
 ### Added / New Features
+- created a clear test specification with ten diverse test cases for the WavePro EXE
+- placed all test files specifications and automation scripts inside the tests folder
+- designed short and simple test cases covering text presence button clicks visual checks and scrolling
+- prepared the same test cases for multiple automation tools to allow direct comparison
+- focused on functionality that can be reliably tested with an EXE application
+- documented which types of checks are difficult or not possible with the current setup
+- ensured all test cases are easy to understand and follow the 80/20 principle
 
 ### Additional Comment
 -version with a lot of errors
 
 ### All Req
+- fixed the blue row selection highlight so it is consistent and fully visible across every column including the category column
+- ensured All Categories shows both the checkbox and blue text when selected
 - ensured every new To-Do creates a physical txt file with the entered name in the selected category
 - hide the rating option for all To-Do items
 - added save and cancel icons to every editable column that uses the green key
