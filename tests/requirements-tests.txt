@@ -1,6 +1,7 @@
 # Testwerkzeuge für Wave Pro (Windows, Python 3.11)
-pywinauto==0.6.9
-pytest==8.3.5
-pytest-html==4.1.1
-robotframework==7.3.2
-pillow==11.3.0
+pywinauto==0.6.9      # steuert die EXE (Fenster, Buttons, Maus, Tastatur)
+pytest==8.3.5         # Testwerkzeug 1
+pytest-html==4.1.1    # HTML-Bericht für pytest
+robotframework==7.3.2 # Testwerkzeug 2
+pillow==11.3.0        # Screenshots und Pixelmessung (TC-09)
+PyYAML==6.0.2         # liest die zentrale Testspezifikation

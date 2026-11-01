@@ -3,56 +3,63 @@
 | | |
 |---|---|
 | **Testobjekt** | Wave Pro – Music Studio, EXE aus `publish/` |
-| **Version der Spezifikation** | 1.0 – 01.11.2026 |
-| **Ziel** | Mit 10 kurzen, **sehr unterschiedlichen** Testfällen zeigen, was an der EXE automatisch testbar ist – und was nicht. |
-| **Automatisiert mit** | pywinauto (steuert die EXE) + pytest **und** Robot Framework (dieselben 10 Tests, zum Vergleich) |
+| **Zentrale Testfälle** | **`spec/testfaelle.yaml`** – die einzige Quelle. pytest und Robot Framework lesen diese Datei direkt. |
+| **Dieses Dokument** | Erklärt Rahmen, Werkzeuge und Grenzen. Die Tabelle in Abschnitt 3 wird automatisch aus der YAML-Datei erzeugt. |
 
 ---
 
-## 1. Welche Werkzeuge passen zur EXE?
+## 1. So hängt alles zusammen
 
-| Werkzeug | Für Wave Pro? | Warum |
+```
+                spec/testfaelle.yaml      ← HIER werden Testfälle definiert (einzige Stelle)
+                         │
+                 common/spec.py           ← liest + prüft die YAML-Datei
+          ┌──────────────┼───────────────────────────┐
+          ▼              ▼                           ▼
+   pytest_suite/   robot_suite/yaml_parser.py   tools/erzeuge_uebersicht.py
+   (pytest)        (Robot Framework)            (Tabelle in diesem Dokument)
+          └──────────────┬──────────────┘
+                         ▼
+               common/schritte.py         ← Schritt-Name → echte Aktion/Prüfung
+                         ▼
+               common/wavepro.py          ← pywinauto bedient die EXE
+                         ▼
+                   Wave Pro (EXE)
+```
+
+**Neuen Testfall anlegen oder ändern:** nur `spec/testfaelle.yaml` bearbeiten. Beide Werkzeuge und die Tabelle hier übernehmen das automatisch.
+
+---
+
+## 2. Werkzeuge – was passt zur EXE?
+
+| Werkzeug | Für Wave Pro? | Aufgabe |
 |---|---|---|
-| **pywinauto** | ✅ ja – der „Motor“ | Bedient Windows-Programme: Fenster, Buttons, Texte, Tabellen, Maus, Tastatur. |
-| **pytest** | ✅ ja | Schreibt und startet Tests in Python. Gut für Entwickler. |
-| **Robot Framework** | ✅ ja | Dieselben Tests als lesbare Sätze („Klicke Button“). Gut für Teams und Fachleute. |
-| **Playwright** | ❌ nein | Nur für Webseiten im Browser. Wave Pro ist kein Browser-Programm. → Für deine Next.js-Website. |
-| **Selenium** | ❌ nein | Ebenfalls nur Browser. |
-
-> **Merksatz:** pywinauto *bedient* die App. pytest oder Robot *organisieren* die Tests und schreiben den Bericht.
+| **pywinauto** | ✅ | Bedient die EXE: Fenster, Buttons, Texte, Tabelle, Maus, Tastatur. |
+| **pytest** | ✅ | Liest die Spezifikation und führt sie aus. Bericht für Entwickler. |
+| **Robot Framework** | ✅ | Liest **dieselbe** Spezifikation und führt sie aus. Schritt-für-Schritt-Protokoll. |
+| **Playwright / Selenium** | ❌ | Nur für Webseiten im Browser – nicht für eine Windows-EXE. |
 
 ---
 
-## 2. Testumgebung und Testdaten
+## 3. Die Testfälle (automatisch aus `spec/testfaelle.yaml`)
 
-- **PC:** Windows 10/11, Python 3.11. Wave Pro muss **geschlossen** sein.
-- **Während des Laufs (ca. 5 Min.):** Maus und Tastatur **nicht** benutzen – die Tests bewegen die echte Maus.
-- **Testdaten:** Jeder Test erzeugt eine eigene, temporäre Musikbibliothek in `%TEMP%`:
-  60 stille WAV-Dateien `Artist 01 - Song 01.wav` … `Artist 60 - Song 60.wav` in den Ordnern `Pop/`, `Rock/` und dem leeren Ordner `To-Do/`.
-- **Schutz deiner Daten:**
-  - Deine echte Musik wird **nie** geöffnet.
-  - Deine Wave-Pro-Einstellungen, die Änderungshistorie und offene Aufgaben werden **vorher gesichert und danach exakt wiederhergestellt** – auch nach einem Absturz beim nächsten Lauf.
+Vor **jedem** Testfall: neue Testbibliothek (60 stille WAV-Dateien `Artist NN - Song NN` in `Pop/` und `Rock/`, leerer Ordner `To-Do/`) und frisch gestartete EXE. Danach wird die EXE geschlossen und die Testdaten werden gelöscht.
 
----
-
-## 3. Die 10 Testfälle
-
-Jeder Testfall prüft ein **anderes Prinzip**. Jeder Test startet die App frisch.
-
-| ID | Prinzip | Schritte | Erwartetes Ergebnis |
+<!-- AUTO-START: aus spec/testfaelle.yaml erzeugt – nicht von Hand ändern -->
+| ID | Prinzip | Aktionen (was der Test tut) | Erwartetes Ergebnis (was geprüft wird) |
 |---|---|---|---|
-| **TC-01** | Start / Fenster | EXE starten | Hauptfenster erscheint in < 30 s, Titel beginnt mit „Wave Pro - Music Studio“ |
-| **TC-02** | Texte lesen | – | „60 songs“, „Nothing is playing“ sowie die Buttons „Play Filtered“, „Reset filters“ und „+ To-Do“ sind vorhanden |
-| **TC-03** | Daten in Tabelle | – | Die Tabelle enthält „Artist 01“, „Song 01“ und „Artist 60“; die erste Zeile ist sichtbar |
-| **TC-04** | Text eingeben | „Song 07“ ins Suchfeld tippen | Suchfeld = „Song 07“; Song 07 sichtbar, Song 08 ausgeblendet |
-| **TC-05** | Button klicken | Suchen wie TC-04, dann „Reset filters“ klicken | Suchfeld leer, Song 08 wieder sichtbar |
-| **TC-06** | Dialog + Datei | „+ To-Do“ → Name „TC06 Testlied“ → „Create To-Do“ | Dialog schließt; die Datei `To-Do/TC06 Testlied.txt` existiert **auf der Festplatte**; Zeile erscheint in der Tabelle |
-| **TC-07** | Tastatur-Kürzel | Strg+E halten + T, dann Esc | To-Do-Dialog öffnet sich und schließt; **keine** neue Datei (Abbrechen erzeugt nichts) |
-| **TC-08** | Scrollen | „⤓ End“, „⤒ Top“, Mausrad nach unten | Letzte bzw. erste Zeile liegt im sichtbaren Bereich; nach dem Mausrad ist die erste Zeile weggescrollt |
-| **TC-09** | Visuell (Pixel) | Zeile 2 anklicken, Screenshot | **Jede** Spalte der Zeile ist ≥ 50 % blau; eine andere Zeile ist < 10 % blau |
-| **TC-10** | Fenstergröße | Start, dann 900×600, dann maximieren, dann wiederherstellen | Startfenster passt auf den Bildschirm; die Buttons bleiben im Fenster bzw. auf dem Bildschirm |
-
-**Wo im Code?** `pytest_suite/test_wavepro.py` (Funktion `test_tc01_…`) und `robot_suite/wavepro.robot` (Test „TC-01 …“).
+| **TC-01** Hauptfenster erscheint | Start / Fenster | – | 1. Fenstertitel Sollte Beginnen Mit „Wave Pro - Music Studio“<br>2. Startzeit Sollte Unter Sekunden Liegen „30“ |
+| **TC-02** Beschriftungen sind sichtbar | Texte lesen | – | 1. Text Sollte Sichtbar Sein „60 songs“<br>2. Text Sollte Sichtbar Sein „Nothing is playing“<br>3. Button Sollte Existieren „Play Filtered“<br>4. Button Sollte Existieren „Reset filters“<br>5. Button Sollte Existieren „+ To-Do“ |
+| **TC-03** Tabelle zeigt die Lieder | Daten in Tabelle | – | 1. Tabelle Sollte Enthalten „Artist 01“<br>2. Tabelle Sollte Enthalten „Song 01“<br>3. Tabelle Sollte Enthalten „Artist 60“<br>4. Zeile Sollte Im Sichtbaren Bereich Sein „Artist 01“ |
+| **TC-04** Suche filtert die Liste | Text eingeben | 1. Tippe In Suchfeld „Song 07“ | 2. Suchfeld Sollte Enthalten „Song 07“<br>3. Zeile Sollte Angezeigt Werden „Song 07“<br>4. Zeile Sollte Ausgeblendet Sein „Song 08“ |
+| **TC-05** Reset filters setzt zurück | Button klicken | 1. Tippe In Suchfeld „Song 07“<br>3. Klicke Button „Reset filters“ | 2. Zeile Sollte Ausgeblendet Sein „Song 08“<br>4. Suchfeld Sollte Enthalten „“<br>5. Zeile Sollte Angezeigt Werden „Song 08“ |
+| **TC-06** To-Do erzeugt eine Datei | Dialog + Datei auf Festplatte | 1. Klicke Button „+ To-Do“<br>3. Tippe In Dialog „Add To-Do“, „TC06 Testlied“<br>4. Klicke Im Dialog „Add To-Do“, „Create To-Do“ | 2. Dialog Sollte Erscheinen „Add To-Do“<br>5. Dialog Sollte Geschlossen Sein „Add To-Do“<br>6. Datei Sollte Existieren „To-Do/TC06 Testlied.txt“, „To-Do: TC06 Testlied“<br>7. Tabelle Sollte Enthalten „TC06 Testlied“ |
+| **TC-07** Tastenkürzel öffnet Dialog, Esc bricht ab | Tastatur-Kürzel | 1. Merke Anzahl Textdateien<br>2. Druecke Strg+E Plus „T“<br>4. Druecke Escape | 3. Dialog Sollte Erscheinen „Add To-Do“<br>5. Dialog Sollte Geschlossen Sein „Add To-Do“<br>6. Anzahl Textdateien Sollte Unveraendert Sein |
+| **TC-08** Scrollen mit End, Top und Mausrad | Scrollen | 2. Klicke Button „End“<br>5. Klicke Button „Top“<br>7. Scrolle Mit Mausrad „-10“ | 1. Zeile Sollte Nicht Im Sichtbaren Bereich Sein „Artist 60“<br>3. Zeile Sollte Im Sichtbaren Bereich Sein „Artist 60“<br>4. Zeile Sollte Nicht Im Sichtbaren Bereich Sein „Artist 01“<br>6. Zeile Sollte Im Sichtbaren Bereich Sein „Artist 01“<br>8. Zeile Sollte Nicht Im Sichtbaren Bereich Sein „Artist 01“ |
+| **TC-09** Auswahl ist in jeder Spalte blau | Visuell (Pixel) | 1. Klicke Zeile „Artist 02“<br>2. Speichere Screenshot „tc09_auswahl.png“ | 3. Zeile Sollte In Allen Spalten Blau Sein „Artist 02“<br>4. Zeile Sollte Nicht Blau Sein „Artist 04“ |
+| **TC-10** Bedienelemente bleiben erreichbar | Fenstergröße | 2. Aendere Fenstergroesse „900“, „600“<br>6. Maximiere Fenster<br>11. Stelle Fenster Wieder Her | 1. Fenster Sollte Auf Den Bildschirm Passen<br>3. Button Sollte Im Fenster Liegen „Reset filters“<br>4. Button Sollte Im Fenster Liegen „End“<br>5. Button Sollte Im Fenster Liegen „+ To-Do“<br>7. Fenster Sollte Maximiert Sein<br>8. Button Sollte Auf Dem Bildschirm Liegen „Reset filters“<br>9. Button Sollte Auf Dem Bildschirm Liegen „End“<br>10. Button Sollte Auf Dem Bildschirm Liegen „+ To-Do“<br>12. Fenster Sollte Nicht Maximiert Sein |
+<!-- AUTO-ENDE -->
 
 ---
 
@@ -62,47 +69,28 @@ Jeder Testfall prüft ein **anderes Prinzip**. Jeder Test startet die App frisch
 |---|---|---|
 | Fenster, Titel, Texte, Buttons | ✅ | Qt meldet Name und Typ an Windows (UI Automation). |
 | Suchfeld, Dialoge, Tastenkürzel | ✅ | Echte Tastatur- und Mauseingaben. |
-| Tabelleninhalt, Filtern, Scrollen | ✅ | Jede Zelle hat einen Namen und eine Position auf dem Bildschirm. |
-| Dateien auf der Festplatte (To-Do) | ✅ | Python prüft die Datei direkt. |
-| Farben und Layout | ◐ teilweise | Nur über Pixel-Messung (TC-09). Kann von Bildschirm, Skalierung oder HDR abhängen. |
-| **Schloss-Buttons, Kategorie-Auswahl, Sterne und 🗑 in den Tabellenzeilen** | ◐ teilweise | Qt meldet diese Bedienelemente **nicht** an Windows. Sie sind nur per Klick auf eine berechnete Position erreichbar – das ist fragil. *Lösung später: im App-Code gezielte Test-Namen ergänzen.* |
-| Kurze Hinweise (Toasts, 1,5–3 s) | ◐ teilweise | Möglich, aber zeitkritisch → unzuverlässig. |
-| Ton ist wirklich hörbar | ❌ | Ein Test kann nicht „hören“. Prüfbar ist nur, dass die Anzeige auf „Wiedergabe“ wechselt. |
-| VU-Meter-Animation | ❌ | Bewegte Grafik ohne feste Werte. |
+| Tabelleninhalt, Filtern, Scrollen | ✅ | Jede Textzelle hat einen Namen und eine Position. |
+| Dateien auf der Festplatte | ✅ | Python prüft die Datei direkt. |
+| Farben und Layout | ◐ | Nur über Pixel-Messung (TC-09). Kann von Nachtmodus oder HDR beeinflusst werden. |
+| **Schloss-Buttons, Kategorie-Auswahl, Sterne und 🗑 in den Tabellenzeilen** | ◐ | Qt meldet diese Bedienelemente **nicht** an Windows. Nur per Klick auf eine berechnete Position erreichbar – fragil. *Lösung: im App-Code Test-Namen ergänzen.* |
+| Kurze Hinweise (Toasts, 1,5–3 s) | ◐ | Möglich, aber zeitkritisch. |
+| Ton ist hörbar, VU-Meter-Animation | ❌ | Ein Test kann nicht hören; bewegte Grafik hat keine festen Werte. |
 | Globale Hotkeys, während eine andere App aktiv ist | ❌ | Hängt von Systemrechten und der App im Vordergrund ab. |
 
 ---
 
-## 5. Vergleich: gleiche Tests, zwei Werkzeuge
+## 5. Testumgebung und Schutz deiner Daten
 
-| | pytest | Robot Framework |
-|---|---|---|
-| Testfall sieht aus wie | Python-Code (`assert …`) | Deutsche Sätze (`Klicke Button  Reset filters`) |
-| Gut für | Entwickler | Tester, Fachabteilung, Kunden |
-| Bericht | `reports/pytest_report.html` | `reports/robot/report.html` + `log.html` (Schritt für Schritt) |
-| Schritte auf Windows | identisch – beide nutzen `common/wavepro.py` | identisch |
-| Screenshot bei Fehler | `reports/pytest_failures/` | `reports/robot_failures/` + im Log |
+- **PC:** Windows 10/11, Python 3.11. Wave Pro muss **geschlossen** sein.
+- **Während des Laufs:** Maus und Tastatur ca. 5 Min. nicht benutzen.
+- **Deine Daten:**
+  - Deine echte Musik wird nie berührt.
+  - Einstellungen, Änderungshistorie und offene Aufgaben werden vorher gesichert und danach exakt wiederhergestellt – nach einem Absturz beim nächsten Lauf.
 
 ---
 
-## 6. Ausführen
+## 6. Grenzen und Befunde
 
-```bat
-pip install -r tests\requirements-tests.txt
-tests\run_pytest.bat      &REM nur pytest
-tests\run_robot.bat       &REM nur Robot Framework
-tests\run_all.bat         &REM beide (Vergleich)
-```
-
-Bestanden = grün im Bericht. Bei einem Fehler: Screenshot und Meldung im Bericht.
-
----
-
-## 7. Grenzen und bisherige Befunde
-
-- **Prüfung vor der Auslieferung:** Alle 10 Tests liefen mit pytest **und** Robot Framework unverändert gegen die echte App. Statt Windows war das Linux mit Qts Barrierefreiheits-Daten – das sind dieselben Daten, die pywinauto unter Windows liest.
-  - Ergebnis: 10/10 grün mit beiden Werkzeugen.
-  - Gegenprobe: Absichtlich eingebaute Fehler (Suche defekt, Auswahlfarbe falsch, Datei im falschen Ordner) wurden jeweils vom richtigen Test gefunden.
-  - **Der erste Lauf auf deinem Windows-PC ist die endgültige Abnahme.**
-- **Befund TC-10:** Ist der Bildschirm schmaler als ca. 1320 Pixel, z. B. ein Laptop mit 1920 px Breite und 150 % Windows-Skalierung, öffnet sich Wave Pro breiter als der Bildschirm (Mindestbreite 1316 px). TC-10 meldet das dann als **Fehler** – gewollt, denn es ist ein echtes Problem für Nutzer.
-- **TC-09** misst Farben am Bildschirm. Wenn Windows eine Farbanpassung nutzt (z. B. Nachtmodus oder HDR), kann der Test fälschlich fehlschlagen → für den Lauf ausschalten.
+- **Prüfung vor der Auslieferung:** Beide Werkzeuge liefen gegen die echte App, mit Qts Barrierefreiheits-Daten – denselben Daten, die pywinauto unter Windows liest. **Der erste Lauf auf deinem Windows-PC ist die endgültige Abnahme.**
+- **TC-09** schlägt fehl, wenn deine EXE vor der Korrektur der Auswahlfarbe gebaut wurde → EXE mit `build.py` neu bauen.
+- **TC-10** schlägt **gewollt** fehl, wenn der Bildschirm schmaler als ca. 1320 px ist (z. B. 1920 px bei 150 % Skalierung). Wave Pro ist dann breiter als der Bildschirm – ein echter Befund.

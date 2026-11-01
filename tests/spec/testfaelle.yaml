@@ -1,0 +1,146 @@
+# ════════════════════════════════════════════════════════════════════════
+#  ZENTRALE TESTSPEZIFIKATION – Wave Pro (Windows-EXE)
+# ════════════════════════════════════════════════════════════════════════
+#  Diese Datei ist die EINZIGE Stelle, an der Testfälle definiert werden.
+#  pytest UND Robot Framework lesen diese Datei direkt und führen genau
+#  diese Schritte aus. Es gibt keine zweite, handgeschriebene Kopie.
+#
+#  Aufbau eines Testfalls:
+#    id       eindeutige Nummer (TC-xx)
+#    titel    kurzer Name
+#    prinzip  was für eine Art von Test (Start, Klick, Pixel, …)
+#    ziel     ein Satz: warum dieser Test existiert (nur Information)
+#    schritte die Schritte, von oben nach unten ausgeführt.
+#             "Schritt-Name: Wert" oder "Schritt-Name: [Wert1, Wert2]"
+#             Schritte mit "Sollte" sind Prüfungen (= erwartetes Ergebnis),
+#             alle anderen sind Aktionen.
+#
+#  Erlaubte Schritt-Namen: siehe common/schritte.py
+#  (ein falsch geschriebener Name wird vor dem Testlauf sofort gemeldet).
+#
+#  Vor JEDEM Testfall automatisch: neue Testbibliothek (60 stille WAV-
+#  Dateien "Artist NN - Song NN" in Pop/ und Rock/, leerer Ordner To-Do/)
+#  und frisch gestartete EXE. Danach: EXE schließen, Testdaten löschen.
+# ════════════════════════════════════════════════════════════════════════
+
+testobjekt: Wave Pro – Music Studio (EXE aus publish/)
+version: "1.1"
+
+testfaelle:
+
+  - id: TC-01
+    titel: Hauptfenster erscheint
+    prinzip: Start / Fenster
+    ziel: Die EXE startet zuverlässig und schnell.
+    schritte:
+      - Fenstertitel Sollte Beginnen Mit: Wave Pro - Music Studio
+      - Startzeit Sollte Unter Sekunden Liegen: 30
+
+  - id: TC-02
+    titel: Beschriftungen sind sichtbar
+    prinzip: Texte lesen
+    ziel: Feste Texte und Buttons sind vorhanden und korrekt beschriftet.
+    schritte:
+      - Text Sollte Sichtbar Sein: 60 songs
+      - Text Sollte Sichtbar Sein: Nothing is playing
+      - Button Sollte Existieren: Play Filtered
+      - Button Sollte Existieren: Reset filters
+      - Button Sollte Existieren: + To-Do
+
+  - id: TC-03
+    titel: Tabelle zeigt die Lieder
+    prinzip: Daten in Tabelle
+    ziel: Alle Lieder der Bibliothek werden geladen und angezeigt.
+    schritte:
+      - Tabelle Sollte Enthalten: Artist 01
+      - Tabelle Sollte Enthalten: Song 01
+      - Tabelle Sollte Enthalten: Artist 60
+      - Zeile Sollte Im Sichtbaren Bereich Sein: Artist 01
+
+  - id: TC-04
+    titel: Suche filtert die Liste
+    prinzip: Text eingeben
+    ziel: Eingabe ins Suchfeld blendet nicht passende Lieder aus.
+    schritte:
+      - Tippe In Suchfeld: Song 07
+      - Suchfeld Sollte Enthalten: Song 07
+      - Zeile Sollte Angezeigt Werden: Song 07
+      - Zeile Sollte Ausgeblendet Sein: Song 08
+
+  - id: TC-05
+    titel: Reset filters setzt zurück
+    prinzip: Button klicken
+    ziel: Ein Klick stellt den Ausgangszustand wieder her.
+    schritte:
+      - Tippe In Suchfeld: Song 07
+      - Zeile Sollte Ausgeblendet Sein: Song 08
+      - Klicke Button: Reset filters
+      - Suchfeld Sollte Enthalten: ""
+      - Zeile Sollte Angezeigt Werden: Song 08
+
+  - id: TC-06
+    titel: To-Do erzeugt eine Datei
+    prinzip: Dialog + Datei auf Festplatte
+    ziel: Ein Dialog funktioniert und erzeugt die echte .txt-Datei.
+    schritte:
+      - Klicke Button: + To-Do
+      - Dialog Sollte Erscheinen: Add To-Do
+      - Tippe In Dialog: [Add To-Do, TC06 Testlied]
+      - Klicke Im Dialog: [Add To-Do, Create To-Do]
+      - Dialog Sollte Geschlossen Sein: Add To-Do
+      - Datei Sollte Existieren: [To-Do/TC06 Testlied.txt, "To-Do: TC06 Testlied"]
+      - Tabelle Sollte Enthalten: TC06 Testlied
+
+  - id: TC-07
+    titel: Tastenkürzel öffnet Dialog, Esc bricht ab
+    prinzip: Tastatur-Kürzel
+    ziel: Strg+E+T funktioniert; Abbrechen erzeugt keine Datei.
+    schritte:
+      - Merke Anzahl Textdateien:
+      - Druecke Strg+E Plus: T
+      - Dialog Sollte Erscheinen: Add To-Do
+      - Druecke Escape:
+      - Dialog Sollte Geschlossen Sein: Add To-Do
+      - Anzahl Textdateien Sollte Unveraendert Sein:
+
+  - id: TC-08
+    titel: Scrollen mit End, Top und Mausrad
+    prinzip: Scrollen
+    ziel: Die lange Liste lässt sich vollständig erreichen.
+    schritte:
+      - Zeile Sollte Nicht Im Sichtbaren Bereich Sein: Artist 60
+      - Klicke Button: End
+      - Zeile Sollte Im Sichtbaren Bereich Sein: Artist 60
+      - Zeile Sollte Nicht Im Sichtbaren Bereich Sein: Artist 01
+      - Klicke Button: Top
+      - Zeile Sollte Im Sichtbaren Bereich Sein: Artist 01
+      - Scrolle Mit Mausrad: -10
+      - Zeile Sollte Nicht Im Sichtbaren Bereich Sein: Artist 01
+
+  - id: TC-09
+    titel: Auswahl ist in jeder Spalte blau
+    prinzip: Visuell (Pixel)
+    ziel: Die markierte Zeile ist über die ganze Breite sichtbar.
+    schritte:
+      - Klicke Zeile: Artist 02
+      - Speichere Screenshot: tc09_auswahl.png
+      - Zeile Sollte In Allen Spalten Blau Sein: Artist 02
+      - Zeile Sollte Nicht Blau Sein: Artist 04
+
+  - id: TC-10
+    titel: Bedienelemente bleiben erreichbar
+    prinzip: Fenstergröße
+    ziel: Das Layout funktioniert klein, maximiert und auf dem Bildschirm.
+    schritte:
+      - Fenster Sollte Auf Den Bildschirm Passen:
+      - Aendere Fenstergroesse: [900, 600]
+      - Button Sollte Im Fenster Liegen: Reset filters
+      - Button Sollte Im Fenster Liegen: End
+      - Button Sollte Im Fenster Liegen: + To-Do
+      - Maximiere Fenster:
+      - Fenster Sollte Maximiert Sein:
+      - Button Sollte Auf Dem Bildschirm Liegen: Reset filters
+      - Button Sollte Auf Dem Bildschirm Liegen: End
+      - Button Sollte Auf Dem Bildschirm Liegen: + To-Do
+      - Stelle Fenster Wieder Her:
+      - Fenster Sollte Nicht Maximiert Sein:

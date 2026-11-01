@@ -1,44 +1,47 @@
 # Tests für Wave Pro (EXE)
 
-Was die Tests prüfen und warum: **[TESTSPEZIFIKATION.md](TESTSPEZIFIKATION.md)**
+**Testfälle stehen an EINER Stelle: [`spec/testfaelle.yaml`](spec/testfaelle.yaml).**
+pytest und Robot Framework lesen diese Datei direkt und führen sie aus.
+Rahmen, Werkzeuge und Grenzen: [TESTSPEZIFIKATION.md](TESTSPEZIFIKATION.md)
 
 ## Schnellstart (Windows)
 
 1. **Wave Pro schließen.**
-2. Einmalig installieren (im Projektordner):
-   ```bat
-   pip install -r tests\requirements-tests.txt
-   ```
-3. Starten – dabei Maus und Tastatur ca. 5 Minuten nicht benutzen:
-   ```bat
-   tests\run_all.bat
-   ```
-4. Ergebnisse öffnen:
+2. Einmalig im Projektordner: `pip install -r tests\requirements-tests.txt`
+3. `tests\run_all.bat` starten. Dabei ca. 5 Min. Maus und Tastatur nicht benutzen.
+4. Berichte öffnen:
    - `tests\reports\pytest_report.html`
    - `tests\reports\robot\report.html`
 
-Die EXE wird automatisch in `publish\` gesucht. Eine andere EXE wählst du so:
-`set WAVEPRO_EXE=C:\Pfad\zu\WavePro.exe`
+Andere EXE als in `publish\` testen: `set WAVEPRO_EXE=C:\Pfad\WavePro.exe`
+
+## Testfall ändern oder hinzufügen
+
+1. `spec\testfaelle.yaml` bearbeiten – erlaubte Schritte stehen in `common\schritte.py`.
+2. Die Tests starten. Tippfehler werden sofort gemeldet. Die Tabelle in
+   `TESTSPEZIFIKATION.md` aktualisiert sich automatisch.
 
 ## Ordner
 
 ```
 tests/
-├── TESTSPEZIFIKATION.md   ← die 10 Testfälle: was ist testbar, was nicht
-├── README.md              ← diese Anleitung
-├── requirements-tests.txt ← pywinauto, pytest, Robot Framework, Pillow
+├── spec/testfaelle.yaml        ★ die zentrale Testspezifikation (einzige Quelle)
+├── TESTSPEZIFIKATION.md        Begleitdokument; Tabelle wird aus der YAML erzeugt
+├── common/
+│   ├── spec.py                 liest + prüft die YAML
+│   ├── schritte.py             Schritt-Name → Aktion/Prüfung
+│   └── wavepro.py              pywinauto steuert die EXE + Schutz deiner Daten
+├── pytest_suite/               pytest liest die YAML
+├── robot_suite/                Robot Framework liest die YAML
+├── tools/erzeuge_uebersicht.py schreibt die Tabelle ins Dokument
 ├── run_pytest.bat / run_robot.bat / run_all.bat
-├── common/wavepro.py      ← steuert die EXE (pywinauto) + Schutz deiner Daten
-├── pytest_suite/          ← die 10 Tests mit pytest
-├── robot_suite/           ← dieselben 10 Tests mit Robot Framework
-└── reports/               ← Berichte und Screenshots (werden erzeugt)
+├── requirements-tests.txt
+└── reports/                    Berichte und Screenshots (werden erzeugt)
 ```
 
 ## Sicherheit
 
-- Die Tests arbeiten nur mit einer **temporären Testbibliothek** (60 stille WAV-Dateien).
-  Deine Musik wird nie berührt.
-- Deine Wave-Pro-Einstellungen, die Historie und offene Aufgaben werden vorher gesichert und
+- Gearbeitet wird nur mit einer temporären Testbibliothek. Deine Musik wird nie berührt.
+- Deine Einstellungen, die Historie und offene Aufgaben werden gesichert und
   danach wiederhergestellt.
-- Bricht ein Lauf ab, stellt der **nächste** Lauf die Sicherung aus
-  `tests\.profile_backup\` automatisch wieder her.
+- Bricht ein Lauf ab, stellt der nächste Lauf die Sicherung automatisch wieder her.
