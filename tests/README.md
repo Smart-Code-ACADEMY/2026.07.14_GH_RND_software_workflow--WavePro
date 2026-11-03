@@ -26,6 +26,7 @@ A different EXE than in `publish\`: `set WAVEPRO_EXE=C:\path\WavePro.exe`
 - Tick **"Save this selection for next time"** to keep your choice
   (stored in `07_choose_tests__test_selection/saved_test_selection.json`).
   Without ticking it, the choice is used only for this run.
+- **"Select all"** ticks every test case, **"Deselect all"** removes every tick with one click.
 - **"Forget saved selection"** deletes the saved choice → all test cases are preselected again.
 - **Cancel** (or Esc) stops the start file; nothing runs.
 - Without a display, a short text menu appears instead of the window.

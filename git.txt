@@ -41,7 +41,7 @@ git status
 git log --oneline
 
 git commit -m "
-v1.2.0
+v1.2.1
 
 ### TODOs / To Fix
 - rename icon remaining red > check is nwe name saving completed
@@ -52,13 +52,13 @@ v1.2.0
 - make the delete icon clearly visible with a light saturated red color
 
 ### Fixed / Improved
-- files names updated
-- test selection pop-up with select all or few testcases added
+- test selection pop-up with deselect all option added
 
 ### Added / New Features
 
 ### Additional Comment
--version with a lot of errors
+- doest work robust for selected testcases needed to improve
+- version with a lot of errors
 
 ### All Req
 

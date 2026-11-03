@@ -115,7 +115,7 @@ def popup(cases, preselected: List[str], saved: Optional[dict]) -> Optional[List
         set_all(True)
 
     ttk.Button(tools, text="Select all", command=lambda: set_all(True)).pack(side="left")
-    ttk.Button(tools, text="Select none", command=lambda: set_all(False)).pack(side="left", padx=6)
+    ttk.Button(tools, text="Deselect all", command=lambda: set_all(False)).pack(side="left", padx=6)
     ttk.Button(tools, text="Forget saved selection", command=forget).pack(side="left")
 
     save_var = tk.BooleanVar(value=False)

@@ -1,1 +1,76 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="42.615" timestamp="2026-11-01T16:42:13.359140+01:00" hostname="Lenovo-IdeaPad-L340-15IRH-Gaming-81LK0060SC-19-12-20"><testcase classname="run_yaml_test_cases_with_pytest" name="test_from_specification[TC-08]" time="42.559" /></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="655.757" timestamp="2026-11-03T12:43:18.308593+01:00" hostname="Lenovo-IdeaPad-L340-15IRH-Gaming-81LK0060SC-19-12-20"><testcase classname="run_yaml_test_cases_with_pytest" name="test_from_specification[TC-08]" time="655.510"><error message="failed on setup with &quot;pywinauto.timings.TimeoutError: timed out&quot;">session = &lt;session.TestSession object at 0x000002B6DD207950&gt;, request = &lt;SubRequest 'context' for &lt;Function test_from_specification[TC-08]&gt;&gt;
+
+    @pytest.fixture
+    def context(session, request):
+        case = request.node.callspec.params["case"]
+        try:
+&gt;           yield session.start_test(case.id, case.title)
+
+06_run_the_tests__test_runners\6a_pytest\conftest.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+05_before_and_after__setup_teardown\prepare_and_cleanup_every_test-unified_test_structure__session.py:53: in start_test
+    app.start()
+04_real_commands__app_driver\commands-to-interact-your-app_app_driver.py:211: in start
+    call("win_spec", self.win_spec, "wait", "visible", timeout=timeout,
+04_real_commands__app_driver\write-down-every-executed-command_command_log.py:222: in call
+    result = function(*args, **kwargs)
+..\..\..\..\07_DB_only-text-databases-and-venvs-for-software-development_big-data\2019.01.01_SmartCodeACADEMY\0000.00.02_venvs\00_LIGHT\.venv\Lib\site-packages\pywinauto\application.py:529: in wait
+    wait_until(timeout, retry_interval,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+timeout = 60.0, retry_interval = 0.09, func = &lt;function WindowSpecification.wait.&lt;locals&gt;.&lt;lambda&gt; at 0x000002B6DDA602C0&gt;, value = True, op = &lt;built-in function eq&gt;, args = (), kwargs = {}, start = 2952701.5167409, func_val = False
+time_left = -151.44636140018702, err = TimeoutError('timed out')
+
+    def wait_until(timeout,
+                   retry_interval,
+                   func,
+                   value=True,
+                   op=operator.eq,
+                   *args, **kwargs):
+        r"""
+        Wait until ``op(function(*args, **kwargs), value)`` is True or until timeout expires
+    
+        * **timeout**  how long the function will try the function
+        * **retry_interval**  how long to wait between retries
+        * **func** the function that will be executed
+        * **value**  the value to be compared against (defaults to True)
+        * **op** the comparison function (defaults to equality)\
+        * **args** optional arguments to be passed to func when called
+        * **kwargs** optional keyword arguments to be passed to func when called
+    
+        Returns the return value of the function
+        If the operation times out then the return value of the the function
+        is in the 'function_value' attribute of the raised exception.
+    
+        e.g. ::
+    
+            try:
+                # wait a maximum of 10.5 seconds for the
+                # the objects item_count() method to return 10
+                # in increments of .5 of a second
+                wait_until(10.5, .5, self.item_count, 10)
+            except TimeoutError as e:
+                print("timed out")
+        """
+        start = timestamp()
+    
+        func_val = func(*args, **kwargs)
+        # while the function hasn't returned what we are waiting for
+        while not op(func_val, value):
+    
+            # find out how much of the time is left
+            time_left = timeout - (timestamp() - start)
+    
+            # if we have to wait some more
+            if time_left &gt; 0:
+                # wait either the retry_interval or else the amount of
+                # time until the timeout expires (whichever is less)
+                time.sleep(min(retry_interval, time_left))
+                func_val = func(*args, **kwargs)
+            else:
+                err = TimeoutError("timed out")
+                err.function_value = func_val
+&gt;               raise err
+E               pywinauto.timings.TimeoutError: timed out
+
+..\..\..\..\07_DB_only-text-databases-and-venvs-for-software-development_big-data\2019.01.01_SmartCodeACADEMY\0000.00.02_venvs\00_LIGHT\.venv\Lib\site-packages\pywinauto\timings.py:375: TimeoutError</error></testcase></testsuite></testsuites>
