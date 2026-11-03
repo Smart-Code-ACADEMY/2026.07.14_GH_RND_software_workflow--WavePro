@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="42.615" timestamp="2026-11-01T16:42:13.359140+01:00" hostname="Lenovo-IdeaPad-L340-15IRH-Gaming-81LK0060SC-19-12-20"><testcase classname="run_yaml_test_cases_with_pytest" name="test_from_specification[TC-08]" time="42.559" /></testsuite></testsuites>

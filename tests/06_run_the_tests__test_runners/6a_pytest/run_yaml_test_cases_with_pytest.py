@@ -6,9 +6,10 @@ per entry (name = ID, e.g. "TC-04"). New test case = edit the YAML only.
 """
 import pytest
 
-from spec_loader import load_specification, run_test_case
+from spec_loader import load_selected_test_cases, run_test_case
 
-TEST_CASES = load_specification()
+# all test cases of the YAML – or only those chosen in the step-07 popup
+TEST_CASES = load_selected_test_cases()
 
 
 @pytest.mark.parametrize("case", TEST_CASES, ids=[c.id for c in TEST_CASES])

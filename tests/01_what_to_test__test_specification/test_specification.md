@@ -20,25 +20,26 @@ Every folder number is one step, in the order the test actually runs:
 | **04** | `04_real_commands__app_driver` | The real commands: click, type, press keys, scroll, wait – each one logged | App driver (pywinauto) + command log |
 | **05** | `05_before_and_after__setup_teardown` | Prepare before, clean up after, protect your data | Setup / teardown |
 | **06** | `06_run_the_tests__test_runners` | Run with 6a pytest, 6b Robot Framework, 6c pywinauto only | Test runners |
-| **07** | `07_results__reports` | Results of every tool, the command logs and the comparison | Reports |
+| **07** | `07_choose_tests__test_selection` | Choose which test cases run (popup, can be saved) | Test selection |
+| **08** | `08_results__reports` | Results of every tool, the command logs and the comparison | Reports |
 
 Example – one line of the specification on its way through the steps:
 
 ```
 01  test_cases.yaml       "Type In Search Box: Song 07"
 02  spec_loader.py        checks: step name exists, one value given
-03  keyword_library.py    @step("Type In Search Box") → c.app.type_search("Song 07")
-04  app_driver.py         find the Edit field → click_input() → type_keys("Song 07") → wait 0.5 s
-05  session.py            (before: start the EXE with test data · after: close and clean up)
+03  connect_testcase_with_right_function_and_run_test_steps__keyword_library.py    @step("Type In Search Box") → c.app.type_search("Song 07")
+04  commands-to-interact-your-app_app_driver.py         find the Edit field → click_input() → type_keys("Song 07") → wait 0.5 s
+05  prepare_and_cleanup_every_test-unified_test_structure__session.py            (before: start the EXE with test data · after: close and clean up)
 06  pytest / Robot / pywinauto only run it
 07  report: PASS or FAIL with the failing step
 ```
 
 All three tools share steps 02–05, so they **must** give the same results and run the
-same commands. `07_results__reports/00_comparison_of_all_tools.html` proves both after every run.
+same commands. `08_results__reports/00_comparison_of_all_tools.html` proves both after every run.
 
 **Command log:** every executed command is written – live in the terminal and in
-`07_results__reports/<tool>/command_log.html` – one line each: left the exact command with its
+`08_results__reports/<tool>/command_log.html` – one line each: left the exact command with its
 result, right what it does in plain words. Every check shows the comparison it made
 (e.g. `check: 'Song 07' == 'Song 07' -> OK`).
 
@@ -48,9 +49,9 @@ result, right what it does in plain words. Every check shows the comparison it m
 
 | No. | Tool | What it shows | Report |
 |---|---|---|---|
-| **6a** | **pytest** + pywinauto | Test framework for developers | `07_results__reports/6a_pytest/report.html`, `command_log.html` |
-| **6b** | **Robot Framework** + pywinauto | Step-by-step log, good for teams and customers | `07_results__reports/6b_robot_framework/log.html`, `command_log.html` |
-| **6c** | **pywinauto only** | No test framework: a small Python program runs the specification | `07_results__reports/6c_pywinauto_only/report.html`, `command_log.html` |
+| **6a** | **pytest** + pywinauto | Test framework for developers | `08_results__reports/6a_pytest/report.html`, `command_log.html` |
+| **6b** | **Robot Framework** + pywinauto | Step-by-step log, good for teams and customers | `08_results__reports/6b_robot_framework/log.html`, `command_log.html` |
+| **6c** | **pywinauto only** | No test framework: a small Python program runs the specification | `08_results__reports/6c_pywinauto_only/report.html`, `command_log.html` |
 
 Not suitable: **Playwright** and **Selenium** – they only control web pages in a browser, not a Windows EXE.
 

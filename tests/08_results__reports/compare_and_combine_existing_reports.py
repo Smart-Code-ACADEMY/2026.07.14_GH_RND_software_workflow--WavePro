@@ -1,9 +1,9 @@
 """STEP 07 – RESULTS: compare the three tools → 00_comparison_of_all_tools.html
 
 Reads:
-    07_results__reports/6a_pytest/junit.xml
-    07_results__reports/6b_robot_framework/output.xml
-    07_results__reports/6c_pywinauto_only/results.json
+    08_results__reports/6a_pytest/junit.xml
+    08_results__reports/6b_robot_framework/output.xml
+    08_results__reports/6c_pywinauto_only/results.json
 and shows PASS/FAIL per test case and tool. The column "Same result?" reports
 when the tools disagree (this must never happen).
 
@@ -12,7 +12,7 @@ executed the SAME commands in the same order ("Same commands?"). Values that
 change on every run are ignored: the random name of the temporary music
 folder, each tool's own report folder and measured numbers (times, pixel shares).
 
-Call: python 07_results__reports/compare_and_combine_existing_reports.pycompare_and_combine_existing_reports.py
+Call: python 08_results__reports/compare_and_combine_existing_reports.py
 """
 import html
 import json
@@ -23,12 +23,12 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 TESTS = Path(__file__).resolve().parents[1]
-for folder in sorted(TESTS.glob("0[2-5]_*")):
-    sys.path.insert(0, str(folder))
+sys.path.insert(0, str(TESTS / "02_read_the_spec__spec_loader"))
+import spec_loader  # noqa: E402,F401  – first: makes the files of steps 03–05 loadable
 
 from command_log import KEYS_SCRIPT  # noqa: E402
 from session import REPORTS_DIR  # noqa: E402
-from spec_loader import load_specification  # noqa: E402
+from spec_loader import load_selected_test_cases  # noqa: E402
 
 TOOLS = [
     ("6a pytest", "6a_pytest/report.html"),
@@ -93,7 +93,7 @@ def _commands(folder: str) -> dict:
 
 
 def main() -> int:
-    cases = load_specification()
+    cases = load_selected_test_cases()        # only the test cases of this run
     sources = [_pytest(), _robot(), _pywinauto()]
     command_sources = [_commands("6a_pytest"), _commands("6b_robot_framework"),
                        _commands("6c_pywinauto_only")]

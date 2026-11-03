@@ -15,10 +15,10 @@ from robot.running import TestSuite
 from robot.utils import escape
 
 TESTS = Path(__file__).resolve().parents[2]
-for folder in sorted(TESTS.glob("0[2-5]_*")):
-    sys.path.insert(0, str(folder))
+sys.path.insert(0, str(TESTS / "02_read_the_spec__spec_loader"))
+import spec_loader  # noqa: E402,F401  – first: makes the files of steps 03–05 loadable
 
-from spec_loader import load_specification  # noqa: E402
+from spec_loader import load_selected_test_cases  # noqa: E402
 
 EXTENSION = ".yaml"
 # IMPORTANT: as_posix() = path with "/". With Windows "\" Robot would read the
@@ -27,7 +27,7 @@ LIBRARY = Path(__file__).with_name("run_shared_steps_with_robot__robot_keywords.
 
 
 def parse(source: Path, defaults=None) -> TestSuite:
-    cases = load_specification(Path(source))
+    cases = load_selected_test_cases(Path(source))   # step-07 selection applied
     suite = TestSuite(name="Wave Pro Test Specification", source=source,
                       doc=f"Generated automatically from {Path(source).name}")
     suite.resource.imports.library(LIBRARY)

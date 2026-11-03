@@ -1,8 +1,8 @@
-Pycharm: Enable Column Selection Mode: Alt + Shift + Insert (toggle on/off).
-
-# often used paths
-# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 cd C:/Users/Sicaja/Desktop/DB/05_DB_business-structures-and-light-Assets/2019.01.01_SmartCodeACADEMY_Official/2026.07.14_GH_RND_software_workflow--WavePro
+
+# often used pycharm commands
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Pycharm: Enable Column Selection Mode: Alt + Shift + Insert (toggle on/off).
 
 # Only first time -> Git Initialization and First Commit
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ git status
 git log --oneline
 
 git commit -m "
-v1.1.9
+v1.2.0
 
 ### TODOs / To Fix
 - rename icon remaining red > check is nwe name saving completed
@@ -52,9 +52,8 @@ v1.1.9
 - make the delete icon clearly visible with a light saturated red color
 
 ### Fixed / Improved
-- file naming improved
-- probably test doesnt work for this names but works for the previous
-- next file need to work with these intuitive names
+- files names updated
+- test selection pop-up with select all or few testcases added
 
 ### Added / New Features
 
@@ -62,15 +61,6 @@ v1.1.9
 -version with a lot of errors
 
 ### All Req
-- fixed the blue row selection highlight so it is consistent and fully visible across every column including the category column
-- ensured All Categories shows both the checkbox and blue text when selected
-- ensured every new To-Do creates a physical txt file with the entered name in the selected category
-- hide the rating option for all To-Do items
-- added save and cancel icons to every editable column that uses the green key
-- fixed frozen edit keys after multiple rating and rename operations
-- ensured the edit keys correctly switch between red and green states on every change and save
-- added for renaming two buttons which appears when edit key is pressed
-- initial category filter remembers last state
 
 "
 

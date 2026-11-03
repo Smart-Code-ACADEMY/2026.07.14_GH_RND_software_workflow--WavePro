@@ -8,7 +8,7 @@ Written ONCE, used by all three tools (6a pytest, 6b Robot, 6c pywinauto):
     end_test()      after every test:       screenshot if failed, close the EXE,
                                             delete the temporary library
     end()           once after all tests:   restore your data exactly,
-                                            save the command log (step 07)
+                                            save the command log (step 08)
 """
 from __future__ import annotations
 
@@ -16,13 +16,13 @@ from pathlib import Path
 from typing import Optional
 
 import app_driver
-import profile_backup
-import generate_and_delete_test_data__temp_music_library
+import profile_guard
+import temp_music_library
 from command_log import LOG
 from keyword_library import Context
 
 TESTS_DIR = Path(__file__).resolve().parents[1]
-REPORTS_DIR = TESTS_DIR / "07_results__reports"
+REPORTS_DIR = TESTS_DIR / "08_results__reports"
 
 
 def safe_name(text: str) -> str:
@@ -34,7 +34,7 @@ class TestSession:
 
     def __init__(self, report_dir: Path):
         self.report_dir = Path(report_dir)
-        self.guard = profile_backup.ProfileGuard()
+        self.guard = profile_guard.ProfileGuard()
         self.context: Optional[Context] = None
         self._library: Optional[Path] = None
 

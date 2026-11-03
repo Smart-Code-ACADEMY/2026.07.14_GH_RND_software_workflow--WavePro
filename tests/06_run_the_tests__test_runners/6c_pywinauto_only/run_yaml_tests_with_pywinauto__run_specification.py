@@ -4,8 +4,8 @@ Shows what pytest and Robot Framework normally do for you: this file reads
 the YAML, runs every test case with pywinauto, catches failures and writes
 its own report:
 
-    07_results__reports/6c_pywinauto_only/report.html   – for people
-    07_results__reports/6c_pywinauto_only/results.json  – for the comparison
+    08_results__reports/6c_pywinauto_only/report.html   – for people
+    08_results__reports/6c_pywinauto_only/results.json  – for the comparison
 
 Call: python 06_run_the_tests__test_runners/6c_pywinauto_only/run_yaml_tests_with_pywinauto__run_specification.py
 """
@@ -17,18 +17,18 @@ import traceback
 from pathlib import Path
 
 TESTS = Path(__file__).resolve().parents[2]
-for folder in sorted(TESTS.glob("0[2-5]_*")):
-    sys.path.insert(0, str(folder))
+sys.path.insert(0, str(TESTS / "02_read_the_spec__spec_loader"))
+import spec_loader  # noqa: E402,F401  – first: makes the files of steps 03–05 loadable
 
 from command_log import KEYS_SCRIPT, LOG, html_table, inline_style  # noqa: E402
 from session import REPORTS_DIR, TestSession  # noqa: E402
-from spec_loader import load_specification, run_test_case  # noqa: E402
+from spec_loader import load_selected_test_cases, run_test_case  # noqa: E402
 
 REPORT_DIR = REPORTS_DIR / "6c_pywinauto_only"
 
 
 def main() -> int:
-    cases = load_specification()
+    cases = load_selected_test_cases()        # step-07 selection applied
     session = TestSession(REPORT_DIR)
     results = []
     session.begin()

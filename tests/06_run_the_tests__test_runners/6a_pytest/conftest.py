@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 
 TESTS = Path(__file__).resolve().parents[2]
-for folder in sorted(TESTS.glob("0[2-5]_*")):
-    sys.path.insert(0, str(folder))
+sys.path.insert(0, str(TESTS / "02_read_the_spec__spec_loader"))
+import spec_loader  # noqa: E402,F401  – first: makes the files of steps 03–05 loadable
 
 from command_log import LOG, html_table, inline_style  # noqa: E402
 from session import REPORTS_DIR, TestSession  # noqa: E402
