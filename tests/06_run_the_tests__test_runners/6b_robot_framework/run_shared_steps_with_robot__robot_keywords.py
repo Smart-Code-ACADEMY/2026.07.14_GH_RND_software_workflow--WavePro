@@ -29,7 +29,7 @@ _SESSION_KEYWORDS = {
 
 
 def _log_image(path: Path) -> None:
-    logger.info(f'<img src="{Path(path).as_uri()}" width="800">', html=True)
+    logger.info(f'<img src="{Path(path).resolve().as_uri()}" width="800">', html=True)
 
 
 def _to_robot_log(entry: dict) -> None:

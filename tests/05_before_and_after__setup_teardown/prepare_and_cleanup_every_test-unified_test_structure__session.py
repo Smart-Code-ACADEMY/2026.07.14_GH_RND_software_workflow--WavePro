@@ -2,11 +2,19 @@
 
 Written ONCE, used by all three tools (6a pytest, 6b Robot, 6c pywinauto):
 
-    begin()         once before all tests:  report folder, back up your data
-    start_test()    before every test:      temporary library, start the EXE,
-                                            wait until "60 songs" is loaded
+    begin()         once before all tests:  is YOUR Wave Pro closed? (must be),
+                                            report folder, back up your data
+    start_test()    before every test:      CLEAN STATE (no Wave Pro left open,
+                                            no key held down), fresh temporary
+                                            library, fresh settings, start the
+                                            EXE, wait until "60 songs" is loaded
     end_test()      after every test:       screenshot if failed, close the EXE,
-                                            delete the temporary library
+                                            release all keys, delete the library
+
+EVERY TEST IS INDEPENDENT: it gets its own library, its own settings, its own
+Wave Pro process and its own memory. Nothing from an earlier test – passed or
+failed – can reach it. So any single test, any selection or all tests can run
+in any combination and give the same result.
     end()           once after all tests:   restore your data exactly,
                                             save the command log (step 08)
 """
@@ -41,11 +49,18 @@ class TestSession:
     def begin(self) -> None:
         self.report_dir.mkdir(parents=True, exist_ok=True)
         LOG.phase("Session start (step 05)", "Back up your real Wave Pro data before any test")
+        if app_driver.wave_pro_window_open():
+            raise RuntimeError(
+                "Wave Pro is open. Please close Wave Pro, then start the tests again. "
+                "(Nothing was changed – your data was not touched.)")
         self.guard.backup()
 
     def start_test(self, case_id: str, title: str) -> Context:
         LOG.begin_test(case_id, title)
-        LOG.phase("Setup (step 05)", "Prepare test data and start Wave Pro")
+        LOG.phase("Setup (step 05)", "Clean state, fresh test data, start Wave Pro")
+        app_driver.release_all_keys()
+        if app_driver.wave_pro_window_open():          # left over by an earlier test
+            app_driver.force_close_wave_pro(app_driver.find_exe().name)
         self._library = temp_music_library.create_test_library()
         self.guard.prepare_for_test(self._library)
         app = app_driver.WaveProApp(app_driver.find_exe(), self._library)
@@ -68,6 +83,10 @@ class TestSession:
         finally:
             if app is not None:
                 app.close()
+            try:
+                app_driver.release_all_keys()
+            except Exception:
+                pass
             if self._library is not None:
                 self.guard.forget_library_cache(self._library)
                 temp_music_library.remove_test_library(self._library)

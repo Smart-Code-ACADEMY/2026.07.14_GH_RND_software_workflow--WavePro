@@ -70,6 +70,21 @@ tests/
 **Renaming a file in 03–05?** Change its entry in `MODULE_FILES` in `spec_loader.py` (one place).
 File names may contain `-`, because these files are loaded by their path.
 
+## Every test case is independent
+
+Any single test, any selection or all tests can run – in any combination – with the same result:
+
+- **Own test data:** a fresh temporary music library for every test case (deleted afterwards).
+- **Own settings:** Wave Pro's settings are reset to "test library only" before every test case.
+- **Own app:** Wave Pro is started fresh for every test case and closed afterwards.
+- **Clean state:** before every test case, a Wave Pro left open by an earlier (failed) test is
+  closed, and Ctrl / Shift / Alt / E / T are released – nothing can carry over.
+- **Wave Pro in front:** before every click and every typed text, the test checks that Wave Pro
+  is the active window and brings it to the front if Windows put another window in front
+  (e.g. after the selection window closed). If that is impossible, the test stops with a clear
+  message instead of clicking into the wrong window.
+- **Your own Wave Pro must be closed:** checked once at the very start, before anything changes.
+
 ## Command log – every command, step by step
 
 While the tests run, **every executed command** is printed in the terminal, one per line:

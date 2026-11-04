@@ -36,10 +36,10 @@ WINDOW_TITLE_START = "Wave Pro - Music Studio"
 TITLE_RE = r"^Wave Pro - Music Studio.*"
 SONG_COUNT = 60          # number of songs in the temporary test library
 
-VK_CONTROL, VK_ESCAPE = 0x11, 0x1B
+VK_SHIFT, VK_CONTROL, VK_MENU, VK_ESCAPE = 0x10, 0x11, 0x12, 0x1B
 KEYEVENTF_KEYUP = 0x0002
-SW_MAXIMIZE, SW_RESTORE = 3, 9
-KEY_NAMES = {VK_CONTROL: "Ctrl", VK_ESCAPE: "Esc"}
+SW_SHOW, SW_MAXIMIZE, SW_RESTORE = 5, 3, 9
+KEY_NAMES = {VK_SHIFT: "Shift", VK_CONTROL: "Ctrl", VK_MENU: "Alt", VK_ESCAPE: "Esc"}
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────
@@ -178,6 +178,40 @@ def _sleep(seconds: float, why: str) -> None:
     call("time", time, "sleep", seconds, explain=f"Wait {seconds} s – {why}")
 
 
+def _same_window(a, b) -> bool:
+    try:
+        return (int(a or 0) & 0xFFFFFFFF) == (int(b or 0) & 0xFFFFFFFF) and bool(a)
+    except (TypeError, ValueError):
+        return False
+
+
+# ── Clean state between tests (used by step 05) ─────────────────────────
+def wave_pro_window_open() -> bool:
+    """Is any Wave Pro main window open right now?"""
+    desktop = call("pywinauto", __import__("pywinauto"), "Desktop", backend="uia",
+                   explain="Connect to Windows UI Automation (sees all windows)")
+    spec = call("desktop", desktop, "window", title_re=TITLE_RE,
+                explain="Describe the Wave Pro main window (by its title)")
+    return bool(call("window", spec, "exists", timeout=1, explain="Is a Wave Pro window open?"))
+
+
+def force_close_wave_pro(exe_name: str) -> None:
+    """Close a Wave Pro left over by an earlier test (never the user's own –
+    the session checks at its start that the user's Wave Pro is closed)."""
+    call("subprocess", subprocess, "run", ["taskkill", "/IM", exe_name, "/T", "/F"],
+         capture_output=True, explain="Force-quit a Wave Pro left over by an earlier test")
+    if not wait_until(lambda: not wave_pro_window_open(), timeout=15,
+                      code="not wave_pro_window_open()", what="no Wave Pro window is open"):
+        raise RuntimeError("A Wave Pro window from an earlier test could not be closed.")
+
+
+def release_all_keys() -> None:
+    """Release keys a failed test might have left pressed (Ctrl, Shift, Alt, E, T)."""
+    for vk in (VK_CONTROL, VK_SHIFT, VK_MENU, ord("E"), ord("T")):
+        call("user32", _user32(), "keybd_event", vk, 0, KEYEVENTF_KEYUP, 0,
+             explain=f"Make sure the key {KEY_NAMES.get(vk, chr(vk))} is not held down")
+
+
 class WaveProApp:
     """Starts, operates and inspects the Wave Pro EXE (one instance per test)."""
 
@@ -218,7 +252,60 @@ class WaveProApp:
 
         if not self.wait_for_text(f"{SONG_COUNT} songs", timeout=timeout):
             raise TimeoutError("The test library was not loaded completely.")
-        call("win", self.win, "set_focus", explain="Bring the main window to the front")
+        self.activate()
+
+    # ---------- Bring a window to the front ----------------------------
+    def activate(self) -> None:
+        """Main window to the front – checked, not just hoped for."""
+        call("win", self.win, "set_focus", explain="Ask Windows to give the main window the focus")
+        self.bring_to_front(self.win.handle, "Wave Pro main window")
+
+    def bring_to_front(self, hwnd: int, name: str) -> None:
+        """Windows blocks programs from jumping in front ("foreground lock"),
+        e.g. after the test-selection window closed. Then clicks and typing
+        would land in another window. So: check which window is in front and,
+        if needed, use the standard work-arounds – up to 5 tries."""
+        user32 = _user32()
+        if call("user32", user32, "IsIconic", hwnd, explain=f"Is the {name} minimized?"):
+            call("user32", user32, "ShowWindow", hwnd, SW_RESTORE,
+                 explain=f"Restore the minimized {name}")
+        for attempt in range(1, 6):
+            front = call("user32", user32, "GetForegroundWindow",
+                         explain="Which window is in front (active) right now?")
+            if _same_window(front, hwnd):
+                LOG.check(f"GetForegroundWindow() == {name} (try {attempt})",
+                          f"Is the {name} in front, so clicks and keys reach it?", True)
+                return
+            if attempt == 1:
+                call("user32", user32, "SetForegroundWindow", hwnd,
+                     explain=f"Bring the {name} to the front")
+            elif attempt == 2:
+                me = call("kernel32", ctypes.windll.kernel32, "GetCurrentThreadId",
+                          explain="Our own thread (needed for the next command)")
+                other = call("user32", user32, "GetWindowThreadProcessId", front, None,
+                             explain="Thread of the window that is in front now")
+                call("user32", user32, "AttachThreadInput", me, other, True,
+                     explain="Share keyboard focus with the front window (allowed by Windows)")
+                call("user32", user32, "SetForegroundWindow", hwnd,
+                     explain=f"Bring the {name} to the front")
+                call("user32", user32, "BringWindowToTop", hwnd,
+                     explain=f"Put the {name} on top of all windows")
+                call("user32", user32, "AttachThreadInput", me, other, False,
+                     explain="Stop sharing keyboard focus again")
+            else:
+                call("user32", user32, "keybd_event", VK_MENU, 0, 0, 0,
+                     explain="PRESS Alt (unlocks bringing a window to the front)")
+                call("user32", user32, "SetForegroundWindow", hwnd,
+                     explain=f"Bring the {name} to the front")
+                call("user32", user32, "keybd_event", VK_MENU, 0, KEYEVENTF_KEYUP, 0,
+                     explain="RELEASE Alt")
+                call("user32", user32, "ShowWindow", hwnd, SW_SHOW,
+                     explain=f"Show the {name}")
+            _sleep(0.3, "let Windows switch the active window")
+        LOG.check(f"GetForegroundWindow() == {name}",
+                  f"Is the {name} in front, so clicks and keys reach it?", False)
+        raise RuntimeError(f"The {name} could not be brought to the front – another window "
+                           f"is in front. Clicks and typing would go to the wrong window.")
 
     def close(self) -> None:
         try:
@@ -310,7 +397,7 @@ class WaveProApp:
                                         explain=f"Read position and size of '{name}'"))
 
     def click_button(self, name: str) -> None:
-        call("win", self.win, "set_focus", explain="Bring the main window to the front")
+        self.activate()
         button = call("button", self._button(name), "wrapper_object",
                       explain=f"Find the button '{name}'")
         call("button", button, "click_input",
@@ -325,6 +412,7 @@ class WaveProApp:
         return call("search_box", spec, "wrapper_object", explain="Find the search box")
 
     def type_search(self, text: str) -> None:
+        self.activate()
         box = self._search_box()
         call("search_box", box, "click_input", explain="Click into the search box")
         call("search_box", box, "type_keys", text, with_spaces=True, set_foreground=True,
@@ -439,7 +527,7 @@ class WaveProApp:
 
     def wheel_scroll_table(self, notches: int) -> None:
         """Mouse wheel over the table; negative number = down."""
-        call("win", self.win, "set_focus", explain="Bring the main window to the front")
+        self.activate()
         table = call("table", self._table(), "wrapper_object", explain="Find the song table")
         # coords=(None, None) → centre of the table (pywinauto uses relative coords).
         call("table", table, "wheel_mouse_input", wheel_dist=notches,
@@ -448,7 +536,7 @@ class WaveProApp:
         _sleep(0.6, "let the list scroll")
 
     def click_row(self, text: str) -> None:
-        call("win", self.win, "set_focus", explain="Bring the main window to the front")
+        self.activate()
         cell = call("cell", self._cell(text), "wrapper_object", explain=f"Find the cell '{text}'")
         call("cell", cell, "click_input", explain=f"CLICK the row '{text}' (selects it)")
         self._park_mouse()
@@ -535,8 +623,15 @@ class WaveProApp:
                           code=f"find_dialog({title!r}) is None",
                           what=f"the dialog '{title}' is closed")
 
-    def dialog_type(self, title: str, text: str) -> None:
+    def _activate_dialog(self, title: str):
         dialog = self._find_dialog(title)
+        if dialog is None:
+            raise LookupError(f"The dialog '{title}' is not open.")
+        self.bring_to_front(dialog.criteria[0]["handle"], f"dialog '{title}'")
+        return dialog
+
+    def dialog_type(self, title: str, text: str) -> None:
+        dialog = self._activate_dialog(title)
         spec = call("dialog", dialog, "child_window", control_type="Edit", found_index=0,
                     explain=f"Describe the text field in '{title}'")
         box = call("dialog_field", spec, "wrapper_object", explain="Find the text field")
@@ -546,7 +641,7 @@ class WaveProApp:
         _sleep(0.3, "let the dialog take the text")
 
     def dialog_click(self, title: str, button: str) -> None:
-        dialog = self._find_dialog(title)
+        dialog = self._activate_dialog(title)
         spec = call("dialog", dialog, "child_window", title=button, control_type="Button",
                     explain=f"Describe the button '{button}' in '{title}'")
         target = call("dialog_button", spec, "wrapper_object", explain=f"Find the button '{button}'")
@@ -564,7 +659,7 @@ class WaveProApp:
 
     def press_ctrl_e_plus(self, letter: str) -> None:
         """Wave Pro shortcut: hold Ctrl + E, then tap a letter."""
-        call("win", self.win, "set_focus", explain="Bring the main window to the front")
+        self.activate()
         vk = ord(letter.upper())
         for k in (VK_CONTROL, ord("E")):
             self._key(k)
