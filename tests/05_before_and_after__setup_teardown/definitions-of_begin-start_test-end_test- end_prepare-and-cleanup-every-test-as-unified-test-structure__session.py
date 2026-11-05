@@ -20,6 +20,7 @@ in any combination and give the same result.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -30,7 +31,8 @@ from command_log import LOG
 from keyword_library import Context
 
 TESTS_DIR = Path(__file__).resolve().parents[1]
-REPORTS_DIR = TESTS_DIR / "08_results__reports"
+REPORTS_DIR = next((d for d in sorted(TESTS_DIR.glob("08_*")) if d.is_dir()),
+                   TESTS_DIR / "08_results__reports")
 
 
 def safe_name(text: str) -> str:
@@ -49,6 +51,8 @@ class TestSession:
     def begin(self) -> None:
         self.report_dir.mkdir(parents=True, exist_ok=True)
         LOG.phase("Session start (step 05)", "Back up your real Wave Pro data before any test")
+        LOG.command(f"os.environ['WAVEPRO_TESTS']", "Test cases chosen in step 07 for this run",
+                    repr(os.environ.get("WAVEPRO_TESTS", "ALL")))
         if app_driver.wave_pro_window_open():
             raise RuntimeError(
                 "Wave Pro is open. Please close Wave Pro, then start the tests again. "

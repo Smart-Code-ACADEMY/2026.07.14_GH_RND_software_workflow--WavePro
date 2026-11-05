@@ -9,10 +9,20 @@ from pathlib import Path
 import pytest
 
 TESTS = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(TESTS / "02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader"))
-import spec_loader  # noqa: E402,F401  – first: makes the files of steps 03–05 loadable
+# First: load step 02 (the spec loader). It is found by its step number and its
+# professional name at the end, so the descriptive part of the name can change.
+if "spec_loader" not in sys.modules:
+    import importlib.util
+    _found = sorted(TESTS.glob("02_*/*__spec_loader.py"))
+    if len(_found) != 1:
+        raise ImportError(f"Expected one file 02_*/*__spec_loader.py in {TESTS}, found {len(_found)}")
+    _spec = importlib.util.spec_from_file_location("spec_loader", _found[0])
+    sys.modules["spec_loader"] = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(sys.modules["spec_loader"])
+import spec_loader  # noqa: E402,F401  – makes the files of steps 03–05 loadable
 
 from command_log import LOG, html_table, inline_style  # noqa: E402
+from spec_loader import selection_text  # noqa: E402
 from session import REPORTS_DIR, TestSession  # noqa: E402
 
 REPORT_DIR = REPORTS_DIR / "6a_pytest"
@@ -39,6 +49,11 @@ def context(session, request):
             crash = getattr(report.longrepr, "reprcrash", None)
             message = crash.message if crash else str(report.longrepr)
         session.end_test(case.id, failed, message)
+
+
+def pytest_html_results_summary(prefix, summary, postfix):
+    """Top of report.html: which test cases this run was asked to execute."""
+    prefix.append(f"<p><b>Test selection (step 07):</b> {selection_text()}</p>")
 
 
 @pytest.hookimpl(hookwrapper=True)

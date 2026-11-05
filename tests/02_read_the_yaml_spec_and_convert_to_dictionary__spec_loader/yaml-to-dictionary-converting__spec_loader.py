@@ -1,10 +1,10 @@
 """STEP 02 – READ AND CHECK THE SPECIFICATION  (spec loader)
 
-1. Makes the step files 03–05 loadable (see MODULE_FILES below).
+1. Makes the step files 03–05 loadable (see MODULE_PATTERNS below).
 2. Reads 01_what_to_test__test_specification/test_cases.yaml and checks it
    BEFORE the EXE is started: unknown step name, wrong number of values,
    duplicate ID, missing field, test case without a check, broken YAML.
-3. Applies the test selection from step 07 (environment variable WAVEPRO_TESTS).
+3. Applies the test selection from step 07 (WAVEPRO_TESTS, or the selection window).
 
 Used by all three tools (6a pytest, 6b Robot Framework, 6c pywinauto only).
 Every tool imports THIS file first.
@@ -22,23 +22,36 @@ from typing import List
 import yaml
 
 TESTS_DIR = Path(__file__).resolve().parents[1]
-SPEC_FILE = TESTS_DIR / "01_what_to_test__test_specification" / "test_cases.yaml"
+
+
+def find_step_file(pattern: str) -> Path:
+    """The one file in tests/ that matches `pattern`, e.g. "05_*/*__session.py".
+
+    Files are found by their step number and their professional name at the
+    END of the file name. The descriptive part in front can be renamed freely."""
+    matches = sorted(TESTS_DIR.glob(pattern))
+    if len(matches) != 1:
+        found = "none" if not matches else ", ".join(m.name for m in matches)
+        raise ImportError(f"Expected exactly one file matching '{pattern}' in {TESTS_DIR}, "
+                          f"found: {found}. Keep the step number in the folder name and the "
+                          f"professional name at the end of the file name.")
+    return matches[0]
+
+
+SPEC_FILE = find_step_file("01_*/test_cases.yaml")
 
 # ── Which file is which module? ─────────────────────────────────────────
-# The file names are long and readable for people and may contain "-".
-# Python cannot `import` such names, so every file gets a short module name
-# here. Rename a file → change it here (one place).
-MODULE_FILES = {
-    "keyword_library":    "03_map_text_to_function__keyword_library/"
-                          "map_testcase_text_with_right_function_and_run_test_steps__keyword_library.py",
-    "app_driver":         "04_real_commands__app_driver/commands-to-interact-your-app_app_driver.py",
-    "command_log":        "04_real_commands__app_driver/write-down-every-executed-command_command_log.py",
-    "profile_guard":      "05_before_and_after__setup_teardown/"
-                          "backup_and_restore_user_data-and-settings__profile_guard.py",
-    "temp_music_library": "05_before_and_after__setup_teardown/"
-                          "generate_and_delete_test_data__temp_music_library.py",
-    "session":            "05_before_and_after__setup_teardown/"
-                          "definitions-of_begin-start_test-end_test- end_prepare-and-cleanup-every-test-as-unified-test-structure__session.py",
+# The file names are long and readable for people and may contain "-" or
+# spaces. Python cannot `import` such names, so each file gets a short module
+# name. The file is found by: step-number folder + professional name at the
+# end. Example: 04_*/*_app_driver.py → commands-to-interact-your-app_app_driver.py
+MODULE_PATTERNS = {
+    "keyword_library":    "03_*/*__keyword_library.py",
+    "app_driver":         "04_*/*_app_driver.py",
+    "command_log":        "04_*/*_command_log.py",
+    "profile_guard":      "05_*/*__profile_guard.py",
+    "temp_music_library": "05_*/*__temp_music_library.py",
+    "session":            "05_*/*__session.py",
 }
 
 
@@ -46,14 +59,10 @@ class _StepFileFinder(importlib.abc.MetaPathFinder):
     """Lets `import app_driver` load 04_…/commands-to-interact-your-app_app_driver.py."""
 
     def find_spec(self, name, path=None, target=None):
-        relative = MODULE_FILES.get(name)
-        if relative is None:
+        pattern = MODULE_PATTERNS.get(name)
+        if pattern is None:
             return None
-        file = TESTS_DIR / relative
-        if not file.is_file():
-            raise ImportError(f"Module '{name}' expects the file {relative} – "
-                              f"was it renamed? Update MODULE_FILES in spec_loader.py.")
-        return importlib.util.spec_from_file_location(name, file)
+        return importlib.util.spec_from_file_location(name, find_step_file(pattern))
 
 
 if not any(isinstance(f, _StepFileFinder) for f in sys.meta_path):
@@ -159,19 +168,50 @@ def run_test_case(context: Context, case: TestCase) -> None:
 
 
 # ── Test selection (step 07) ────────────────────────────────────────────
-def selected_ids() -> List[str]:
-    """IDs chosen in the step-07 popup (WAVEPRO_TESTS="TC-01,TC-04"); empty = all."""
-    raw = os.environ.get("WAVEPRO_TESTS", "").strip()
-    return [x.strip() for x in raw.split(",") if x.strip()]
+class SelectionCancelled(Exception):
+    """The user pressed Cancel in the test-selection window."""
 
 
-def load_selected_test_cases(file: Path = SPEC_FILE) -> List[TestCase]:
-    """All test cases of the specification, filtered by the step-07 selection."""
+def _ask_user() -> List[str]:
+    """Open the step-07 selection window in this process; returns the chosen IDs."""
+    file = find_step_file("07_*/*__test_selection_popup.py")
+    spec = importlib.util.spec_from_file_location("test_selection_popup", file)
+    popup = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(popup)
+    ids = popup.ask_user()
+    if not ids:
+        raise SelectionCancelled("Cancelled in the test-selection window – no tests run.")
+    return ids
+
+
+def load_selected_test_cases(file: Path = SPEC_FILE, ask: bool = True) -> List[TestCase]:
+    """The test cases of this run.
+
+    WAVEPRO_TESTS="TC-08"         → only TC-08 (set by run_6_all_tools.bat)
+    WAVEPRO_TESTS="ALL"           → all test cases, no window
+    WAVEPRO_TESTS not set, ask    → the selection window opens (never silently all)
+    WAVEPRO_TESTS not set, no ask → all test cases (used by the comparison page)"""
     cases = load_specification(file)
-    wanted = selected_ids()
-    if not wanted:
+    raw = os.environ.get("WAVEPRO_TESTS", "").strip()
+    if not raw:
+        if not ask:
+            return cases
+        raw = ",".join(_ask_user())
+        os.environ["WAVEPRO_TESTS"] = raw      # the same choice for the rest of this run
+    if raw.upper() == "ALL":
         return cases
+    wanted = [x.strip() for x in raw.split(",") if x.strip()]
     unknown = [w for w in wanted if w not in {c.id for c in cases}]
     if unknown:
         raise SpecificationError(f"Selected test cases not in the specification: {unknown}")
     return [c for c in cases if c.id in wanted]
+
+
+def selection_text() -> str:
+    """The selection of this run in words – shown at the top of every report."""
+    total = len(load_specification())
+    raw = os.environ.get("WAVEPRO_TESTS", "").strip()
+    if not raw or raw.upper() == "ALL":
+        return f"all {total} test cases"
+    ids = [x.strip() for x in raw.split(",") if x.strip()]
+    return f"{', '.join(ids)} ({len(ids)} of {total} test cases)"

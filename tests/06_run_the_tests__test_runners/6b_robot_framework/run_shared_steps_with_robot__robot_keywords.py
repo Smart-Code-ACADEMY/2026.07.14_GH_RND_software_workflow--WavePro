@@ -11,8 +11,17 @@ from robot.api import logger
 from robot.libraries.BuiltIn import BuiltIn
 
 TESTS = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(TESTS / "02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader"))
-import spec_loader  # noqa: E402,F401  – first: makes the files of steps 03–05 loadable
+# First: load step 02 (the spec loader). It is found by its step number and its
+# professional name at the end, so the descriptive part of the name can change.
+if "spec_loader" not in sys.modules:
+    import importlib.util
+    _found = sorted(TESTS.glob("02_*/*__spec_loader.py"))
+    if len(_found) != 1:
+        raise ImportError(f"Expected one file 02_*/*__spec_loader.py in {TESTS}, found {len(_found)}")
+    _spec = importlib.util.spec_from_file_location("spec_loader", _found[0])
+    sys.modules["spec_loader"] = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(sys.modules["spec_loader"])
+import spec_loader  # noqa: E402,F401  – makes the files of steps 03–05 loadable
 
 from command_log import LOG  # noqa: E402
 from keyword_library import KEYWORDS, execute_step, find_keyword  # noqa: E402
@@ -94,5 +103,6 @@ class WaveProKeywords:
             _log_image(screenshot)
 
 
-# Robot Framework uses the class that has the same name as the file.
-run_shared_steps_with_robot__robot_keywords = WaveProKeywords
+# Robot Framework uses the class that has the same name as the file
+# (whatever the file is called).
+globals()[Path(__file__).stem] = WaveProKeywords

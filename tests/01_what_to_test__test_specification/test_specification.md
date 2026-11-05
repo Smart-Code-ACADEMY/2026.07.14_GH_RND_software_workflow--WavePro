@@ -15,8 +15,8 @@ Every folder number is one step, in the order the test actually runs:
 | Step | Folder | Plain words | Professional term |
 |---|---|---|---|
 | **01** | `01_what_to_test__test_specification` | *What* is tested | Test specification |
-| **02** | `02_read_the_spec__spec_loader` | Read and check the specification | Spec loader / validator |
-| **03** | `03_translate_steps__keyword_library` | Translate each step name into a function | Keyword library (test steps) |
+| **02** | `02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader` | Read the YAML specification, check it and convert it into Python data | Spec loader / validator |
+| **03** | `03_map_text_to_function__keyword_library` | Map each step text of the YAML to its Python function | Keyword library (test steps) |
 | **04** | `04_real_commands__app_driver` | The real commands: click, type, press keys, scroll, wait – each one logged | App driver (pywinauto) + command log |
 | **05** | `05_before_and_after__setup_teardown` | Prepare before, clean up after, protect your data | Setup / teardown |
 | **06** | `06_run_the_tests__test_runners` | Run with 6a pytest, 6b Robot Framework, 6c pywinauto only | Test runners |
@@ -27,10 +27,10 @@ Example – one line of the specification on its way through the steps:
 
 ```
 01  test_cases.yaml       "Type In Search Box: Song 07"
-02  spec_loader.py        checks: step name exists, one value given
-03  connect_testcase_with_right_function_and_run_test_steps__keyword_library.py    @step("Type In Search Box") → c.app.type_search("Song 07")
+02  yaml-to-dictionary-converting__spec_loader.py        checks: step name exists, one value given
+03  map_testcase_text_with_right_function_and_run_test_steps__keyword_library.py    @step("Type In Search Box") → c.app.type_search("Song 07")
 04  commands-to-interact-your-app_app_driver.py         find the Edit field → click_input() → type_keys("Song 07") → wait 0.5 s
-05  prepare_and_cleanup_every_test-unified_test_structure__session.py            (before: start the EXE with test data · after: close and clean up)
+05  definitions-of_begin-start_test-end_test- end_prepare-and-cleanup-every-test-as-unified-test-structure__session.py            (before: start the EXE with test data · after: close and clean up)
 06  pytest / Robot / pywinauto only run it
 07  report: PASS or FAIL with the failing step
 ```

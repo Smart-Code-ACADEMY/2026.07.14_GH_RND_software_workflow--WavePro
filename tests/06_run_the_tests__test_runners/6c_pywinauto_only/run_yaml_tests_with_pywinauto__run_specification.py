@@ -17,18 +17,32 @@ import traceback
 from pathlib import Path
 
 TESTS = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(TESTS / "02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader"))
-import spec_loader  # noqa: E402,F401  – first: makes the files of steps 03–05 loadable
+# First: load step 02 (the spec loader). It is found by its step number and its
+# professional name at the end, so the descriptive part of the name can change.
+if "spec_loader" not in sys.modules:
+    import importlib.util
+    _found = sorted(TESTS.glob("02_*/*__spec_loader.py"))
+    if len(_found) != 1:
+        raise ImportError(f"Expected one file 02_*/*__spec_loader.py in {TESTS}, found {len(_found)}")
+    _spec = importlib.util.spec_from_file_location("spec_loader", _found[0])
+    sys.modules["spec_loader"] = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(sys.modules["spec_loader"])
+import spec_loader  # noqa: E402,F401  – makes the files of steps 03–05 loadable
 
 from command_log import KEYS_SCRIPT, LOG, html_table, inline_style  # noqa: E402
 from session import REPORTS_DIR, TestSession  # noqa: E402
-from spec_loader import load_selected_test_cases, run_test_case  # noqa: E402
+from spec_loader import (SelectionCancelled, load_selected_test_cases,  # noqa: E402
+                         run_test_case, selection_text)
 
 REPORT_DIR = REPORTS_DIR / "6c_pywinauto_only"
 
 
 def main() -> int:
-    cases = load_selected_test_cases()        # step-07 selection applied
+    try:
+        cases = load_selected_test_cases()    # step-07 selection (window if needed)
+    except SelectionCancelled as cancelled:
+        print(cancelled)
+        return 1
     session = TestSession(REPORT_DIR)
     results = []
     session.begin()
@@ -83,6 +97,7 @@ def _html(results) -> str:
 <style>pre{{margin:0;white-space:pre-wrap}} table{{border-collapse:collapse}}
 td,th{{border:1px solid #ccc;padding:6px 10px;vertical-align:top}} th{{background:#eee}}</style>
 <h1>6c pywinauto only – {passed}/{len(results)} passed</h1>
+<p><b>Test selection (step 07):</b> {html.escape(selection_text())}</p>
 <p>Created {time.strftime('%Y-%m-%d %H:%M')} from 01_what_to_test__test_specification/test_cases.yaml ·
 <a href="command_log.html">Full command log of the whole run</a> ·
 Zoomed in? Use ← → to scroll sideways.</p>

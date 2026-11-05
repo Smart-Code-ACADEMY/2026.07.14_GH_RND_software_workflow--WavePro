@@ -1,18 +1,20 @@
 """STEP 07 – CHOOSE WHICH TESTS TO RUN  (test selection popup)
 
-Opens ONCE at the start of every run_6*.bat:
+The window opens ONCE per run:
+  - run_6a/6b/6c_*.bat: the tool opens it itself when it starts
+    (spec_loader.load_selected_test_cases → ask_user() below),
+  - run_6_all_tools.bat: opens it once (this file with --out) and gives the
+    same choice to all three tools through WAVEPRO_TESTS.
+
   - lists every test case of 01_what_to_test__test_specification/test_cases.yaml,
   - preselects your SAVED selection (saved_test_selection.json) – or all tests
     if nothing is saved,
   - "Save this selection for next time" stores the choice; without it the
     choice is used only for this run and the saved one stays as it was.
 
-Output: the chosen IDs on ONE line on stdout, e.g. "TC-01,TC-04".
-The .bat file puts that line into the environment variable WAVEPRO_TESTS,
-which all three tools read (spec_loader.load_selected_test_cases).
-Cancel → prints "CANCEL" and the .bat stops.
-
-Without a display (or without tkinter) a simple text menu is shown instead.
+Command line:  --out FILE   write the chosen IDs (e.g. "TC-08") into FILE
+               --no-popup   use the saved selection (or all) without a window
+Exit code 1 = cancelled. Without a display (or tkinter) a text menu is shown.
 """
 from __future__ import annotations
 
@@ -23,7 +25,14 @@ from pathlib import Path
 from typing import List, Optional
 
 TESTS = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(TESTS / "02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader"))
+if "spec_loader" not in sys.modules:           # load step 02 by its professional name
+    import importlib.util
+    _found = sorted(TESTS.glob("02_*/*__spec_loader.py"))
+    if len(_found) != 1:
+        raise ImportError(f"Expected one file 02_*/*__spec_loader.py in {TESTS}, found {len(_found)}")
+    _spec = importlib.util.spec_from_file_location("spec_loader", _found[0])
+    sys.modules["spec_loader"] = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(sys.modules["spec_loader"])
 
 from spec_loader import load_specification  # noqa: E402
 
@@ -174,13 +183,14 @@ def text_menu(cases, preselected: List[str], saved: Optional[dict]) -> Optional[
     return picked or None
 
 
-def main() -> int:
+def ask_user(no_popup: bool = False) -> Optional[List[str]]:
+    """Show the selection (window, or text menu without a display).
+    Returns the chosen IDs, or None when cancelled."""
     cases = load_specification()
     all_ids = [c.id for c in cases]
     saved = load_saved(all_ids)
     preselected = saved["selected"] if saved else all_ids
-
-    if "--no-popup" in sys.argv:
+    if no_popup:
         ids = preselected
     else:
         try:
@@ -188,13 +198,26 @@ def main() -> int:
         except Exception as e:          # no tkinter / no display
             say(f"(No window possible: {e}. Using the text menu.)")
             ids = text_menu(cases, preselected, saved)
-
     if not ids:
         say("Cancelled – no tests run.")
-        print("CANCEL")
+        return None
+    say(f"Test selection: {len(ids)} of {len(all_ids)} test cases – {', '.join(ids)}")
+    return ids
+
+
+def main() -> int:
+    ids = ask_user(no_popup="--no-popup" in sys.argv)
+    out = sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else None
+    if not ids:
+        if out:
+            Path(out).write_text("", encoding="utf-8")
+        else:
+            print("CANCEL")
         return 1
-    say(f"Running {len(ids)} of {len(all_ids)} test cases: {', '.join(ids)}")
-    print(",".join(ids))
+    if out:
+        Path(out).write_text(",".join(ids) + "\n", encoding="utf-8")
+    else:
+        print(",".join(ids))
     return 0
 
 
