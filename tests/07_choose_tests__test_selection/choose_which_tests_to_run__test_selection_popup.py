@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import List, Optional
 
 TESTS = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(TESTS / "02_read_the_spec__spec_loader"))
+sys.path.insert(0, str(TESTS / "02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader"))
 
 from spec_loader import load_specification  # noqa: E402
 

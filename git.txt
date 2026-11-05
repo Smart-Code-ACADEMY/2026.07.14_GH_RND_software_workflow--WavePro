@@ -41,7 +41,7 @@ git status
 git log --oneline
 
 git commit -m "
-v1.3.0
+v1.3.1
 
 ### TODOs / To Fix
 - rename icon remaining red > check is nwe name saving completed
@@ -52,7 +52,7 @@ v1.3.0
 - make the delete icon clearly visible with a light saturated red color
 
 ### Fixed / Improved
-- individual and all test cases from selection pop-up works
+- name made more intuitive but code doesnt work with this names, needed to update app
 
 ### Added / New Features
 

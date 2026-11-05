@@ -17,7 +17,7 @@ import traceback
 from pathlib import Path
 
 TESTS = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(TESTS / "02_read_the_spec__spec_loader"))
+sys.path.insert(0, str(TESTS / "02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader"))
 import spec_loader  # noqa: E402,F401  – first: makes the files of steps 03–05 loadable
 
 from command_log import KEYS_SCRIPT, LOG, html_table, inline_style  # noqa: E402

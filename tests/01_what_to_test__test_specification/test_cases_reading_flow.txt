@@ -1,0 +1,13 @@
+test_cases.yaml
+      ↓
+Test Loader (spec_loader.py) = Python Dictionary
+      ↓
+Test Runner
+      ↓
+Keyword Library
+      ↓
+Application Driver
+
+
+conftest.py   -> when it happens
+session.py    -> what happens (session functions definitions)

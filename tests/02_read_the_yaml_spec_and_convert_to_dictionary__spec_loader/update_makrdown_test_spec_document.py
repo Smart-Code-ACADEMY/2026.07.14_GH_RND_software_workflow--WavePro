@@ -4,14 +4,14 @@ The part between AUTO-START and AUTO-END is generated from test_cases.yaml,
 so the document always shows exactly what the tools execute.
 Do not edit that part by hand – edit test_cases.yaml instead.
 
-    python 02_read_the_spec__spec_loader/update_makrdown_test_spec_document.py           update
-    python 02_read_the_spec__spec_loader/update_makrdown_test_spec_document.py --check   only check
+    python 02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader/update_makrdown_test_spec_document.py           update
+    python 02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader/update_makrdown_test_spec_document.py --check   only check
 """
 import sys
 from pathlib import Path
 
 TESTS = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(TESTS / "02_read_the_spec__spec_loader"))
+sys.path.insert(0, str(TESTS / "02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader"))
 import spec_loader  # noqa: E402,F401  – first: makes the files of steps 03–05 loadable
 
 from spec_loader import SPEC_FILE, load_specification  # noqa: E402

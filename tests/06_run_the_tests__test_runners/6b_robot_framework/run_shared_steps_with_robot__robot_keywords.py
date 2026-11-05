@@ -1,7 +1,7 @@
 """STEP 06b – Robot Framework: keyword library.
 
 Defines NO steps of its own. It hands all steps of step 03
-(connect_testcase_with_right_function_and_run_test_steps__keyword_library.py) to Robot ("Dynamic Library API") and uses the same
+(map_testcase_text_with_right_function_and_run_test_steps__keyword_library.py) to Robot ("Dynamic Library API") and uses the same
 session (step 05) as pytest and pywinauto only.
 """
 import sys
@@ -11,7 +11,7 @@ from robot.api import logger
 from robot.libraries.BuiltIn import BuiltIn
 
 TESTS = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(TESTS / "02_read_the_spec__spec_loader"))
+sys.path.insert(0, str(TESTS / "02_read_the_yaml_spec_and_convert_to_dictionary__spec_loader"))
 import spec_loader  # noqa: E402,F401  – first: makes the files of steps 03–05 loadable
 
 from command_log import LOG  # noqa: E402
@@ -56,9 +56,9 @@ class WaveProKeywords:
 
     def get_keyword_documentation(self, name):
         if name in _SESSION_KEYWORDS:
-            return "Setup / teardown from step 05 (prepare_and_cleanup_every_test-unified_test_structure__session.py)."
+            return "Setup / teardown from step 05 (definitions-of_begin-start_test-end_test- end_prepare-and-cleanup-every-test-as-unified-test-structure__session.py)."
         kind = "Check" if find_keyword(name).is_check else "Action"
-        return f"{kind} from step 03 (connect_testcase_with_right_function_and_run_test_steps__keyword_library.py)"
+        return f"{kind} from step 03 (map_testcase_text_with_right_function_and_run_test_steps__keyword_library.py)"
 
     def run_keyword(self, name, args, kwargs=None):
         if name in _SESSION_KEYWORDS:

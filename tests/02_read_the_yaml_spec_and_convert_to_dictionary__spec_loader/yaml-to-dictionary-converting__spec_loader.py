@@ -29,8 +29,8 @@ SPEC_FILE = TESTS_DIR / "01_what_to_test__test_specification" / "test_cases.yaml
 # Python cannot `import` such names, so every file gets a short module name
 # here. Rename a file → change it here (one place).
 MODULE_FILES = {
-    "keyword_library":    "03_translate_steps__keyword_library/"
-                          "connect_testcase_with_right_function_and_run_test_steps__keyword_library.py",
+    "keyword_library":    "03_map_text_to_function__keyword_library/"
+                          "map_testcase_text_with_right_function_and_run_test_steps__keyword_library.py",
     "app_driver":         "04_real_commands__app_driver/commands-to-interact-your-app_app_driver.py",
     "command_log":        "04_real_commands__app_driver/write-down-every-executed-command_command_log.py",
     "profile_guard":      "05_before_and_after__setup_teardown/"
@@ -38,7 +38,7 @@ MODULE_FILES = {
     "temp_music_library": "05_before_and_after__setup_teardown/"
                           "generate_and_delete_test_data__temp_music_library.py",
     "session":            "05_before_and_after__setup_teardown/"
-                          "prepare_and_cleanup_every_test-unified_test_structure__session.py",
+                          "definitions-of_begin-start_test-end_test- end_prepare-and-cleanup-every-test-as-unified-test-structure__session.py",
 }
 
 
