@@ -1,1 +1,38 @@
 Windows UI Automation -> Accessibility Insights for Windows or Inspect.exe
+
+wo sind there functions definiert:
+
+YAML: "Click Button"
+        ↓
+find_keyword("Click Button")
+        ↓
+Findet @step("Click Button")
+        ↓
+c.app.click_button("+ To-Do")
+        ↓
+Der Button wird angeklickt
+
+
+
+
+
+
+keyword_library.py
+│
+├── KEYWORDS = {}                  ← Dictionary erstellen
+│
+├── @step("Click Button")          ← Funktion registrieren
+│
+├── find_keyword("Click Button")   ← Funktion finden
+│
+└── keyword.function(...)          ← Funktion aufrufen
+         │
+         ▼
+    c.app.click_button("+ To-Do")
+         │
+         ▼
+app_driver.py
+│
+└── class WaveProApp
+       └── def click_button(...)
+              └── Button suchen und anklicken

@@ -41,7 +41,7 @@ git status
 git log --oneline
 
 git commit -m "
-v1.3.2 - test | setup
+v1.3.3 - test | setup
 
 ### TODOs / To Fix
 - rename icon remaining red > check is nwe name saving completed
@@ -52,12 +52,9 @@ v1.3.2 - test | setup
 - make the delete icon clearly visible with a light saturated red color
 
 ### Fixed / Improved
-- updated all test code and configuration to work with the new application name
-- fixed single test selection so only the chosen test cases are executed
-- corrected the report generation to show only the tests that were actually run
-- verified that both individual test runs and full suite runs work correctly
 
 ### Added / New Features
+- created single file educational example with core test principles
 
 ### Additional Comment
 - doest work robust for selected testcases needed to improve
